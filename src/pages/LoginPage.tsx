@@ -179,7 +179,11 @@ export function LoginPage() {
                 </label>
               </div>
               
-              <button type="button" className="text-sm text-jc-blue hover:text-jc-blue-dark font-medium transition">
+              <button 
+                type="button" 
+                onClick={() => navigate('/forgot-password')}
+                className="text-sm text-jc-blue hover:text-jc-blue-dark font-medium transition"
+              >
                 ¿Olvidaste tu contraseña?
               </button>
             </div>
