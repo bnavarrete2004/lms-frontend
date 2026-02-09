@@ -1,8 +1,14 @@
+// src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+
+// Public Pages
+import { LandingPage } from '@/pages/LandingPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
+
+// Protected Pages
 import { DashboardPage } from '@/pages/DashboardPage';
 
 function App() {
@@ -10,27 +16,43 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {/* Ruta raíz - redirige al dashboard */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-          {/* Ruta de recuperación de contraseña */}
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          
-          {/* Ruta de login */}
+          {/* Public Routes */}
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
-          
-          {/* Rutas protegidas */}
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+          {/* Protected Routes - Student */}
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['estudiante']}>
                 <DashboardPage />
               </ProtectedRoute>
             }
           />
-          
-          {/* Ruta 404 */}
-          <Route path="*" element={<div>Página no encontrada</div>} />
+
+          {/* Protected Routes - Relator (cuando lo creemos) */}
+          {/* <Route
+            path="/relator/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['relator']}>
+                <RelatorDashboardPage />
+              </ProtectedRoute>
+            }
+          /> */}
+
+          {/* Protected Routes - Admin (cuando lo creemos) */}
+          {/* <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['administrador']}>
+                <AdminDashboardPage />
+              </ProtectedRoute>
+            }
+          /> */}
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
@@ -38,4 +60,3 @@ function App() {
 }
 
 export default App;
-

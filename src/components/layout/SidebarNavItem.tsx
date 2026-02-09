@@ -25,8 +25,8 @@ export function SidebarNavItem({
   const baseStyles = 'flex items-center px-4 py-3 rounded-lg transition-all group';
   
   const activeStyles = isActive
-    ? 'bg-white/10 border-l-4 border-jc-calipso rounded-r-lg font-medium'
-    : 'text-blue-100/70 hover:bg-white/5';
+  ? 'bg-white/10 border-l-4 border-jc-calipso rounded-r-lg font-medium text-white'
+  : 'text-white/90 hover:bg-white/5 hover:text-white';
 
   return (
     <Link to={href} className={cn(baseStyles, activeStyles)}>

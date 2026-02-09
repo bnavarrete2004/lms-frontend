@@ -40,7 +40,7 @@ export function Sidebar({
   onLogout,
 }: SidebarProps) {
   return (
-    <aside className="w-72 bg-gradient-to-b from-jc-blue to-jc-blue-dark text-white flex flex-col z-20 shadow-2xl overflow-y-auto">
+    <aside className="w-72 bg-gradient-to-b from-jc-calipso via-jc-cyan to-jc-blue text-white flex flex-col z-20 shadow-2xl overflow-y-auto">
       {/* Header con Logo y Badge de Rol */}
       <div className="p-8">
         <Logo variant="white" size="sm" withText className="mb-2" />

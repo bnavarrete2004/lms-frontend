@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { CourseCard } from '@/components/common/CourseCard';
+import { AvailableCourseCard } from '@/components/common/AvailableCourseCard';
 import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
 
@@ -98,153 +99,180 @@ export function DashboardPage() {
       sessionTime="1h 23min"
       notificationCount={2}
     >
-      {/* Banner "Continuar Viendo" */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 mb-10 h-64 flex items-center shadow-xl">
-        <img 
-          src="https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=1200" 
-          className="absolute inset-0 w-full h-full object-cover opacity-40" 
-          alt="Curso"
-        />
-        <div className="relative z-10 p-12 max-w-2xl">
-          <Badge variant="calipso" className="mb-4">
-            Siguiente Lección: Módulo 4.1
-          </Badge>
-          <h2 className="text-3xl font-bold text-white mb-4 leading-tight">
-            Gestión de Sostenibilidad y Medio Ambiente en Centros de Cultivo
-          </h2>
-          <div className="flex items-center space-x-6 mb-6">
-            <div className="flex flex-col">
-              <span className="text-slate-400 text-[10px] uppercase font-semibold tracking-widest">
-                Avance Curricular
-              </span>
-              <span className="text-white font-bold text-lg">65% Completado</span>
-            </div>
-            <div className="flex-1 max-w-xs h-2 bg-white/20 rounded-full">
-              <div className="w-[65%] h-full bg-jc-calipso rounded-full shadow-lg" />
-            </div>
-          </div>
-          <button className="px-8 py-3 bg-white text-slate-900 rounded-lg font-semibold hover:bg-jc-calipso hover:text-white transition-all transform hover:scale-105 shadow-lg">
-            Retomar Lección
-          </button>
-        </div>
-      </div>
-
-      {/* Grid de Cursos y Actividad */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-        {/* Columna Izquierda: Cursos */}
-        <div className="xl:col-span-8">
-          <div className="flex justify-between items-end mb-6">
-            <h3 className="text-xl font-bold text-slate-800">Capacitaciones Activas</h3>
-            <a href="#" className="text-jc-blue text-sm font-semibold hover:underline">
-              Catálogo completo →
-            </a>
-          </div>
+        
+        {/* COLUMNA PRINCIPAL (Acción) - 8 de 12 columnas */}
+        <div className="xl:col-span-8 space-y-8">
+          
+          {/* 1. Hero / Continuar Viendo */}
+          <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 h-72 flex items-center shadow-xl group">
+            <img 
+              src="https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=1200" 
+              className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700" 
+              alt="Curso"
+            />
+            <div className="relative z-10 p-8 md:p-12 max-w-2xl">
+              <Badge variant="calipso" className="mb-4 animate-pulse">
+                Siguiente Lección: Módulo 4.1
+              </Badge>
+              <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 leading-tight">
+                Gestión de Sostenibilidad y Medio Ambiente en Centros de Cultivo
+              </h2>
+              <div className="flex items-center space-x-6 mb-6">
+                <div className="flex-1 max-w-xs h-2.5 bg-white/20 rounded-full">
+                  <div className="w-[65%] h-full bg-jc-calipso rounded-full shadow-[0_0_10px_rgba(82,169,183,0.5)]" />
+                </div>
+                <span className="text-white font-bold text-sm">65% completado</span>
+              </div>
+              <button className="px-8 py-3 bg-jc-calipso text-white rounded-lg font-semibold hover:bg-white hover:text-slate-900 transition-all transform hover:shadow-lg">
+                Retomar Lección
+              </button>
+            </div>
+          </section>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <CourseCard
-              title="Bioseguridad y Manejo de Patógenos en Especies Salmonídeas"
-              image="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=500"
-              senceId="1238912"
-              duration="24 Horas lectivas"
-              progress={45}
-            />
-            <CourseCard
-              title="Normativa Sanitaria y Calidad Alimentaria (HACCP) en Peces"
-              image="https://images.unsplash.com/photo-1628595351029-c2bf17511435?w=500"
-              senceId="9918231"
-              duration="12 Horas lectivas"
-              progress={10}
-            />
-          </div>
+          {/* 2. Cursos Activos */}
+          <section>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-slate-800 flex items-center">
+                <span className="w-2 h-8 bg-jc-blue rounded-full mr-3"></span>
+                Capacitaciones Activas
+              </h3>
+              <Badge variant="info" className="text-slate-600 bg-slate-100">2 En curso</Badge>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <CourseCard
+                title="Bioseguridad y Manejo de Patógenos en Especies Salmonídeas"
+                image="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=500"
+                senceId="1238912"
+                duration="24 Horas lectivas"
+                progress={45}
+              />
+              <CourseCard
+                title="Normativa Sanitaria y Calidad Alimentaria (HACCP) en Peces"
+                image="https://images.unsplash.com/photo-1628595351029-c2bf17511435?w=500"
+                senceId="9918231"
+                duration="12 Horas lectivas"
+                progress={10}
+              />
+            </div>
+          </section>
         </div>
 
-        {/* Columna Derecha: Alertas y Actividad */}
-        <div className="xl:col-span-4 space-y-6">
-          {/* Hitos de Evaluación */}
-          <div>
-            <h3 className="text-xl font-bold text-slate-800 mb-4">Hitos de Evaluación</h3>
-            
-            <Alert variant="warning" title="Examen Crítico" className="mb-4">
-              Evaluación de Protocolos de Emergencia Acuícola<br />
-              <span className="font-semibold">Cierra en 3 días (17 Enero)</span>
-            </Alert>
-
-            <Alert variant="info" title="Carga de Documentación">
-              Diploma de Manipulación de Alimentos<br />
-              <span className="font-semibold">Plazo: 20 Enero</span>
-            </Alert>
-          </div>
-
-          {/* Bitácora de Aprendizaje */}
-          <div>
-            <h3 className="text-xl font-bold text-slate-800 mb-4">Bitácora de Aprendizaje</h3>
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-              <ul className="space-y-4">
-                <li className="flex items-start">
-                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
-                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">Test Aprobado</p>
-                    <p className="text-xs text-slate-500">Módulo 2 - Control de Oxigenación</p>
-                    <p className="text-xs text-jc-calipso mt-1 font-medium">Hace 2 horas</p>
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
-                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">Contenido Visto</p>
-                    <p className="text-xs text-slate-500">Introducción a la Sostenibilidad Oceánica</p>
-                    <p className="text-xs text-jc-calipso mt-1 font-medium">Ayer</p>
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
-                    <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">Recurso Descargado</p>
-                    <p className="text-xs text-slate-500">Manual de Prevención en Balsas Jaula</p>
-                    <p className="text-xs text-jc-calipso mt-1 font-medium">Hace 3 días</p>
-                  </div>
-                </li>
-              </ul>
+        {/* COLUMNA LATERAL (Información y Status) - 4 de 12 columnas */}
+        <aside className="xl:col-span-4 space-y-8">
+          
+          {/* 3. Hitos y Urgencias */}
+          <div className="bg-slate-50 p-4 rounded-2xl">
+            <h3 className="text-lg font-bold text-slate-800 mb-4">Hitos Próximos</h3>
+            <div className="space-y-3">
+              <Alert variant="warning" title="Examen Crítico" className="border-l-4 shadow-sm">
+                <p className="text-xs">Evaluación de Protocolos de Emergencia</p>
+                <p className="text-xs font-bold mt-1">Cierra en 3 días</p>
+              </Alert>
+              <Alert variant="info" title="Documentación" className="border-l-4 shadow-sm">
+                <p className="text-xs">Carga Diploma de Manipulación</p>
+              </Alert>
             </div>
           </div>
 
-          {/* Diploma Obtenido */}
-          <div>
-            <h3 className="text-xl font-bold text-slate-800 mb-4">Diplomas</h3>
-            <div className="bg-gradient-to-br from-jc-calipso to-jc-blue rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
-              <svg className="absolute -right-4 -bottom-4 w-28 h-28 text-white/10" fill="currentColor" viewBox="0 0 20 20">
+          {/* 4. Logros (Gamificación) */}
+          <div className="bg-gradient-to-br from-jc-calipso to-jc-blue rounded-2xl p-6 text-white shadow-lg relative overflow-hidden group">
+            <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:rotate-12 transition-transform duration-500">
+              <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
               </svg>
-              <div className="relative z-10">
-                <div className="flex items-center space-x-2 mb-3">
-                  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                    <span className="text-lg">🏆</span>
-                  </div>
-                  <span className="text-xs font-bold uppercase tracking-wider">Diploma disponible</span>
+            </div>
+            <div className="relative z-10">
+              <span className="text-[10px] font-bold uppercase tracking-widest bg-white/20 px-2 py-1 rounded">¡Certificación Lista!</span>
+              <p className="font-bold text-md mt-3 mb-4 leading-tight">Fundamentos de Acuicultura y Ciclo del Salmón</p>
+              <button className="w-full py-2 bg-white text-jc-blue rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors">
+                Descargar PDF
+              </button>
+            </div>
+          </div>
+
+          {/* 5. Actividad Reciente */}
+          <div>
+            <h3 className="text-lg font-bold text-slate-800 mb-4">Bitácora</h3>
+            <div className="bg-white rounded-xl border border-slate-100 divide-y divide-slate-100 shadow-sm">
+              <div className="p-4 flex items-center hover:bg-slate-50 transition-colors">
+                <div className="w-2 h-2 rounded-full mr-4 bg-green-500" />
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-slate-700">Test Aprobado</p>
+                  <p className="text-[11px] text-slate-500">Módulo 2 - Control de Oxigenación</p>
                 </div>
-                <p className="font-bold text-lg mb-1 leading-tight">
-                  Fundamentos de Acuicultura y Ciclo del Salmón
-                </p>
-                <p className="text-xs text-blue-100 mb-5">Validado por J&C Digital Training y SENCE</p>
-                <button className="w-full py-2.5 bg-white text-jc-calipso rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-blue-50 transition-colors shadow-md">
-                  Descargar PDF
-                </button>
+                <span className="text-[10px] text-slate-400">2h</span>
+              </div>
+              <div className="p-4 flex items-center hover:bg-slate-50 transition-colors">
+                <div className="w-2 h-2 rounded-full mr-4 bg-blue-500" />
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-slate-700">Video Visto</p>
+                  <p className="text-[11px] text-slate-500">Introducción a la Sostenibilidad</p>
+                </div>
+                <span className="text-[10px] text-slate-400">Ayer</span>
+              </div>
+              <div className="p-4 flex items-center hover:bg-slate-50 transition-colors">
+                <div className="w-2 h-2 rounded-full mr-4 bg-purple-500" />
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-slate-700">Recurso Descargado</p>
+                  <p className="text-[11px] text-slate-500">Manual de Prevención</p>
+                </div>
+                <span className="text-[10px] text-slate-400">3d</span>
               </div>
             </div>
           </div>
-        </div>
+        </aside>
+
+        {/* 6. SECCIÓN INFERIOR (Exploración) - 12 de 12 columnas */}
+        <footer className="xl:col-span-12 pt-8 border-t border-slate-200">
+          <div className="flex justify-between items-end mb-8">
+            <div>
+              <h3 className="text-2xl font-bold text-slate-800">Explora Más Cursos</h3>
+              <p className="text-slate-500 mt-1">Potencia tu carrera profesional con estas nuevas capacitaciones</p>
+            </div>
+            <button className="group flex items-center text-jc-blue font-bold hover:text-jc-calipso transition-colors">
+              Ver catálogo completo
+              <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <AvailableCourseCard
+              title="Gestión de Residuos y Economía Circular en Acuicultura"
+              image="https://images.unsplash.com/photo-1621451537084-482c73073a0f?w=500"
+              senceId="2847561"
+              duration="16 Horas lectivas"
+              category="Medio Ambiente"
+              isNew={true}
+            />
+            <AvailableCourseCard
+              title="Tecnologías de Monitoreo en Cultivos Marinos"
+              image="https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=500"
+              senceId="3958472"
+              duration="20 Horas lectivas"
+              category="Tecnología"
+            />
+            <AvailableCourseCard
+              title="Nutrición Avanzada en Salmónidos"
+              image="https://images.unsplash.com/photo-1544943910-4c1dc44aab44?w=500"
+              senceId="4729183"
+              duration="24 Horas lectivas"
+              category="Nutrición"
+            />
+            <AvailableCourseCard
+              title="Certificación ISO 14001 para Centros de Cultivo"
+              image="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=500"
+              senceId="5618294"
+              duration="32 Horas lectivas"
+              category="Certificaciones"
+              isNew={true}
+            />
+          </div>
+        </footer>
+
       </div>
     </MainLayout>
   );
