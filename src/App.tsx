@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { RelatorDashboardPage } from '@/pages/RelatorDashboardPage';
+import { AdminDashboardPage } from '@/pages/AdminDashboardPage';
 
 
 // Public Pages
@@ -43,15 +44,14 @@ function App() {
             }
           /> */
 
-          {/* Protected Routes - Admin (cuando lo creemos) */}
-          {/* <Route
+          /* <Route
             path="/admin/dashboard"
             element={
               <ProtectedRoute allowedRoles={['administrador']}>
                 <AdminDashboardPage />
               </ProtectedRoute>
             }
-          /> */}
+          /> */
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />

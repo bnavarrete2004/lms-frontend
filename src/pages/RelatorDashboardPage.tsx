@@ -14,7 +14,6 @@ import {
   Bell,
   TrendingUp,
   Users,
-  Settings,
   ChevronRight,
   Download
 } from 'lucide-react';

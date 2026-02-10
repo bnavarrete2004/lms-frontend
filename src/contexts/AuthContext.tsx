@@ -1,13 +1,13 @@
 // src/contexts/AuthContext.tsx
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { Usuario, LoginCredentials } from '@/types/auth';
-import { authService } from '@/api/auth';
+import { authService } from '@/api/auth'; // ← Importar authService (que ya existe en src/api/auth.ts)
 
 interface AuthContextType {
   user: Usuario | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<Usuario>; // ← Cambiar para retornar el usuario
+  login: (credentials: LoginCredentials) => Promise<Usuario>;
   logout: () => void;
   updateUser: (user: Usuario) => void;
 }
@@ -19,7 +19,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar si hay un usuario guardado al cargar
     const storedUser = authService.getCurrentUser();
     if (storedUser) {
       setUser(storedUser);
@@ -27,13 +26,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
+  // ✅ ESTE ES EL CAMBIO: actualizar esta función para que use response.user
   const login = async (credentials: LoginCredentials): Promise<Usuario> => {
     try {
-      const response = await authService.login(credentials);
-      setUser(response.user);
-      return response.user; // ← Retornar el usuario para que LoginPage lo use
-    } catch (error) {
-      console.error('Error en login:', error);
+      console.log('🔄 Intentando login con:', credentials.username);
+      
+      const response = await authService.login(credentials); // ← Esto retorna AuthResponse {access, refresh, user}
+      
+      console.log('✅ Respuesta del backend:', response);
+      console.log('👤 Usuario:', response.user);
+      console.log('🎭 Rol del usuario:', response.user.rol);
+      
+      setUser(response.user); // ← Cambio: ahora es response.user
+      return response.user;   // ← Cambio: ahora es response.user
+    } catch (error: any) {
+      console.error('❌ Error en login:', error);
+      console.error('📄 Detalles del error:', error.response?.data);
       throw error;
     }
   };
