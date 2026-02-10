@@ -10,7 +10,7 @@ interface LogoProps {
 export function Logo({ variant = 'white', size = 'md', withText = false, className }: LogoProps) {
   const logoFiles = {
     white: '/src/assets/images/logo_jc_white_transparent_md.png',
-    color: '/src/assets/images/logo_jc_color_sm.png',
+    color: '/src/assets/images/logo_jc_color_transparent.png',
     blue: '/src/assets/images/logo_jc_blue_transparent_sm.png',
     black: '/src/assets/images/logo_jc_black_md.png',
   };

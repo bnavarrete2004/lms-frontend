@@ -2,6 +2,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { RelatorDashboardPage } from '@/pages/RelatorDashboardPage';
+
 
 // Public Pages
 import { LandingPage } from '@/pages/LandingPage';
@@ -9,7 +11,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 
 // Protected Pages
-import { DashboardPage } from '@/pages/DashboardPage';
+import { DashboardPage } from '@/pages/StudentDashboardPage';
 
 function App() {
   return (
@@ -31,15 +33,15 @@ function App() {
             }
           />
 
-          {/* Protected Routes - Relator (cuando lo creemos) */}
-          {/* <Route
+          /* Protected Routes - Relator (cuando lo creemos) */
+          /* <Route
             path="/relator/dashboard"
             element={
               <ProtectedRoute allowedRoles={['relator']}>
                 <RelatorDashboardPage />
               </ProtectedRoute>
             }
-          /> */}
+          /> */
 
           {/* Protected Routes - Admin (cuando lo creemos) */}
           {/* <Route

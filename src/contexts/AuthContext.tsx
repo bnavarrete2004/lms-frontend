@@ -1,3 +1,4 @@
+// src/contexts/AuthContext.tsx
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { Usuario, LoginCredentials } from '@/types/auth';
 import { authService } from '@/api/auth';
@@ -6,7 +7,7 @@ interface AuthContextType {
   user: Usuario | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<Usuario>; // ← Cambiar para retornar el usuario
   logout: () => void;
   updateUser: (user: Usuario) => void;
 }
@@ -26,10 +27,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = async (credentials: LoginCredentials): Promise<Usuario> => {
     try {
       const response = await authService.login(credentials);
       setUser(response.user);
+      return response.user; // ← Retornar el usuario para que LoginPage lo use
     } catch (error) {
       console.error('Error en login:', error);
       throw error;
