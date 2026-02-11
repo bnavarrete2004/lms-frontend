@@ -19,43 +19,63 @@ export function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    console.log('🚀 FORMULARIO ENVIADO');
+    console.log('📝 Credenciales:', formData);
+    
     setError('');
     setIsLoading(true);
 
     try {
-      const user = await login(formData); // ← Recibir el usuario
+      console.log('⏳ Llamando a login...');
+      const user = await login(formData);
+      
+      console.log('✅ Usuario autenticado:', user);
+      console.log('📋 Rol del usuario:', user.rol);
+      console.log('📊 Tipo de rol:', typeof user.rol);
+      console.log('🔍 Comparación:', {
+        'user.rol': user.rol,
+        'es estudiante': user.rol === 'estudiante',
+        'es relator': user.rol === 'relator',
+        'es administrador': user.rol === 'administrador'
+      });
       
       // Redirigir según el rol
       if (user.rol === 'estudiante') {
+        console.log('🎓 Redirigiendo a /student/dashboard');
         navigate('/student/dashboard');
       } else if (user.rol === 'relator') {
+        console.log('👨‍🏫 Redirigiendo a /relator/dashboard');
         navigate('/relator/dashboard');
       } else if (user.rol === 'administrador') {
+        console.log('👑 Redirigiendo a /admin/dashboard');
         navigate('/admin/dashboard');
       } else {
+        console.log('⚠️ Rol no reconocido:', user.rol);
         navigate('/');
       }
+      
+      console.log('🏁 Después del navigate');
     } catch (err: any) {
+      console.error('❌ Error en login:', err);
       setError(err.response?.data?.detail || 'Credenciales inválidas. Por favor, verifica tu usuario y contraseña.');
     } finally {
       setIsLoading(false);
+      console.log('🔚 Finally ejecutado');
     }
   };
 
-  return (
+  return (  // ← ASEGÚRATE DE QUE ESTO ESTÉ AQUÍ
     <div className="min-h-screen flex">
       {/* Panel Izquierdo - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-jc-calipso via-jc-cyan to-jc-blue text-white p-12 flex-col justify-between relative overflow-hidden">
-        {/* Decoración de fondo */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -mr-48 -mt-48 animate-pulse"></div>
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-white/5 rounded-full -ml-40 -mb-40 animate-pulse delay-700"></div>
         <div className="absolute top-1/2 right-1/4 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
         
         <div className="relative z-10">
-          {/* Logo con texto */}
           <Logo variant="white" size="md" withText className="mb-8" />
           
-          {/* Título */}
           <div className="mt-24">
             <h1 className="text-5xl font-bold mb-6 leading-tight">
               Bienvenido a tu Plataforma de Capacitación
@@ -65,7 +85,6 @@ export function LoginPage() {
             </p>
           </div>
           
-          {/* Features */}
           <div className="space-y-4">
             <div className="flex items-center space-x-3 group">
               <div className="bg-white/20 p-2 rounded-lg group-hover:bg-white/30 transition-all">
@@ -94,7 +113,6 @@ export function LoginPage() {
           </div>
         </div>
         
-        {/* Footer */}
         <div className="relative z-10 text-sm text-white/70">
           © 2026 J&C Digital Training. Todos los derechos reservados.
         </div>
@@ -103,7 +121,6 @@ export function LoginPage() {
       {/* Panel Derecho - Formulario */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
         <div className="w-full max-w-md">
-          {/* Logo para móvil */}
           <div className="lg:hidden text-center mb-8">
             <div className="text-2xl font-bold bg-gradient-to-r from-jc-calipso to-jc-blue bg-clip-text text-transparent">
               J&C Digital Training
@@ -111,13 +128,11 @@ export function LoginPage() {
             <p className="text-gray-600 text-sm mt-2">Plataforma de Capacitación</p>
           </div>
           
-          {/* Header del formulario */}
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">Iniciar Sesión</h2>
             <p className="text-gray-600">Ingresa tus credenciales para acceder</p>
           </div>
           
-          {/* Mensaje de error */}
           {error && (
             <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start">
               <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -127,9 +142,7 @@ export function LoginPage() {
             </div>
           )}
           
-          {/* Formulario */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Usuario - usando componente Input */}
             <Input
               label="Usuario o RUT"
               type="text"
@@ -144,7 +157,6 @@ export function LoginPage() {
               }
             />
             
-            {/* Contraseña - usando componente Input */}
             <Input
               label="Contraseña"
               type={showPassword ? 'text' : 'password'}
@@ -168,7 +180,7 @@ export function LoginPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                     </svg>
                   ) : (
-                    <svg className="h-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
@@ -177,7 +189,6 @@ export function LoginPage() {
               }
             />
             
-            {/* Recordarme */}
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <input
@@ -199,7 +210,6 @@ export function LoginPage() {
               </button>
             </div>
             
-            {/* Botón - usando componente Button */}
             <Button
               type="submit"
               variant="primary"
@@ -211,7 +221,6 @@ export function LoginPage() {
             </Button>
           </form>
           
-          {/* Información de soporte */}
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-600">
               ¿Problemas para ingresar?{' '}
@@ -223,5 +232,5 @@ export function LoginPage() {
         </div>
       </div>
     </div>
-  );
+  );  // ← Y QUE EL PARÉNTESIS CIERRE AQUÍ
 }

@@ -4,15 +4,10 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { RelatorDashboardPage } from '@/pages/RelatorDashboardPage';
 import { AdminDashboardPage } from '@/pages/AdminDashboardPage';
-
-
-// Public Pages
 import { LandingPage } from '@/pages/LandingPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
-
-// Protected Pages
-import { DashboardPage } from '@/pages/StudentDashboardPage';
+import { DashboardPage } from '@/pages/StudentDashboardPage'; // ← Cambiar el import
 
 function App() {
   return (
@@ -26,7 +21,7 @@ function App() {
 
           {/* Protected Routes - Student */}
           <Route
-            path="/dashboard"
+            path="/student/dashboard"
             element={
               <ProtectedRoute allowedRoles={['estudiante']}>
                 <DashboardPage />
@@ -34,24 +29,25 @@ function App() {
             }
           />
 
-          /* Protected Routes - Relator (cuando lo creemos) */
-          /* <Route
+          {/* Protected Routes - Relator */}
+          <Route
             path="/relator/dashboard"
             element={
               <ProtectedRoute allowedRoles={['relator']}>
                 <RelatorDashboardPage />
               </ProtectedRoute>
             }
-          /> */
+          />
 
-          /* <Route
+          {/* Protected Routes - Admin */}
+          <Route
             path="/admin/dashboard"
             element={
               <ProtectedRoute allowedRoles={['administrador']}>
                 <AdminDashboardPage />
               </ProtectedRoute>
             }
-          /> */
+          />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
