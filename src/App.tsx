@@ -7,7 +7,8 @@ import { AdminDashboardPage } from '@/pages/AdminDashboardPage';
 import { LandingPage } from '@/pages/LandingPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
-import { DashboardPage } from '@/pages/StudentDashboardPage'; // ← Cambiar el import
+import { DashboardPage } from '@/pages/StudentDashboardPage'; 
+import { TestApiPage } from './pages/TestApiPage';
 
 function App() {
   return (
@@ -48,6 +49,8 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route path="/test-api" element={<TestApiPage />} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
