@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -5,12 +6,52 @@ import { CourseCard } from '@/components/common/CourseCard';
 import { AvailableCourseCard } from '@/components/common/AvailableCourseCard';
 import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
+import { useApi } from '@/hooks/useApi';
+import { inscripcionService } from '@/api/services/inscripcionService';
 
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const handleCourseClick = (cursoId: number) => {
+  navigate(`/student/courses/${cursoId}`);
+};
 
-  // Configuración del menú del sidebar para estudiante
+  // ============================================
+  // CONEXIÓN CON BACKEND - DATOS REALES
+  // ============================================
+  
+  const { 
+    data: inscripciones, 
+    loading: loadingInscripciones, 
+    error: errorInscripciones,
+    execute: cargarInscripciones 
+  } = useApi(() => inscripcionService.getMisInscripciones());
+
+  useEffect(() => {
+    cargarInscripciones();
+  }, []);
+
+  // ============================================
+  // CÁLCULOS BASADOS EN DATOS REALES
+  // ============================================
+  
+  // Filtrar inscripciones activas (en_curso)
+  const inscripcionesActivas = inscripciones?.filter(i => i.estado === 'en_curso') || [];
+  
+  // Calcular progreso general
+  const progresoGeneral = inscripciones && inscripciones.length > 0
+    ? Math.round(inscripciones.reduce((sum, i) => sum + (i.porcentaje_avance || 0), 0) / inscripciones.length)
+    : 0;
+
+  // Curso con más progreso (para hero section)
+  const cursoEnProgreso = inscripciones && inscripciones.length > 0
+    ? inscripciones.reduce((max, i) => (i.porcentaje_avance || 0) > (max.porcentaje_avance || 0) ? i : max)
+    : null;
+
+  // ============================================
+  // CONFIGURACIÓN DEL SIDEBAR
+  // ============================================
+
   const sidebarSections = [
     {
       title: 'Menú Principal',
@@ -87,6 +128,10 @@ export function DashboardPage() {
     navigate('/login');
   };
 
+  // ============================================
+  // RENDER
+  // ============================================
+
   return (
     <MainLayout
       role="estudiante"
@@ -104,58 +149,93 @@ export function DashboardPage() {
         {/* COLUMNA PRINCIPAL (Acción) - 8 de 12 columnas */}
         <div className="xl:col-span-8 space-y-8">
           
-          {/* 1. Hero / Continuar Viendo */}
-          <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 h-72 flex items-center shadow-xl group">
-            <img 
-              src="https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=1200" 
-              className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700" 
-              alt="Curso"
-            />
-            <div className="relative z-10 p-8 md:p-12 max-w-2xl">
-              <Badge variant="calipso" className="mb-4 animate-pulse">
-                Siguiente Lección: Módulo 4.1
-              </Badge>
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 leading-tight">
-                Gestión de Sostenibilidad y Medio Ambiente en Centros de Cultivo
-              </h2>
-              <div className="flex items-center space-x-6 mb-6">
-                <div className="flex-1 max-w-xs h-2.5 bg-white/20 rounded-full">
-                  <div className="w-[65%] h-full bg-jc-calipso rounded-full shadow-[0_0_10px_rgba(82,169,183,0.5)]" />
+          {/* 1. Hero / Continuar Viendo - CON DATOS REALES */}
+          {loadingInscripciones ? (
+            <div className="h-72 bg-slate-200 animate-pulse rounded-2xl" />
+          ) : cursoEnProgreso ? (
+            <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 h-72 flex items-center shadow-xl group">
+              <img 
+                src={cursoEnProgreso.curso_data?.imagen_portada || "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=1200"} 
+                className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700" 
+                alt="Curso"
+              />
+              <div className="relative z-10 p-8 md:p-12 max-w-2xl">
+                <Badge variant="calipso" className="mb-4 animate-pulse">
+                  En Progreso
+                </Badge>
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 leading-tight">
+                  {cursoEnProgreso.curso_data?.nombre}
+                </h2>
+                <div className="flex items-center space-x-6 mb-6">
+                  <div className="flex-1 max-w-xs h-2.5 bg-white/20 rounded-full">
+                    <div 
+                      className="h-full bg-jc-calipso rounded-full shadow-[0_0_10px_rgba(82,169,183,0.5)]"
+                      style={{ width: `${cursoEnProgreso.porcentaje_avance}%` }}
+                    />
+                  </div>
+                  <span className="text-white font-bold text-sm">{cursoEnProgreso.porcentaje_avance}% completado</span>
                 </div>
-                <span className="text-white font-bold text-sm">65% completado</span>
+                <button className="px-8 py-3 bg-jc-calipso text-white rounded-lg font-semibold hover:bg-white hover:text-slate-900 transition-all transform hover:shadow-lg">
+                  Retomar Lección
+                </button>
               </div>
-              <button className="px-8 py-3 bg-jc-calipso text-white rounded-lg font-semibold hover:bg-white hover:text-slate-900 transition-all transform hover:shadow-lg">
-                Retomar Lección
-              </button>
-            </div>
-          </section>
+            </section>
+          ) : (
+            <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 h-72 flex items-center shadow-xl">
+              <div className="relative z-10 p-8 md:p-12 text-center w-full">
+                <h2 className="text-2xl font-bold text-white mb-4">
+                  No tienes cursos en progreso
+                </h2>
+                <p className="text-white/70 mb-6">
+                  Explora el catálogo y comienza tu primera capacitación
+                </p>
+                <button className="px-8 py-3 bg-jc-calipso text-white rounded-lg font-semibold hover:bg-white hover:text-slate-900 transition-all">
+                  Ver Catálogo
+                </button>
+              </div>
+            </section>
+          )}
 
-          {/* 2. Cursos Activos */}
+          {/* 2. Cursos Activos - CON DATOS REALES */}
           <section>
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-slate-800 flex items-center">
                 <span className="w-2 h-8 bg-jc-blue rounded-full mr-3"></span>
                 Capacitaciones Activas
               </h3>
-              <Badge variant="info" className="text-slate-600 bg-slate-100">2 En curso</Badge>
+              <Badge variant="info" className="text-slate-600 bg-slate-100">
+                {inscripcionesActivas.length} En curso
+              </Badge>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <CourseCard
-                title="Bioseguridad y Manejo de Patógenos en Especies Salmonídeas"
-                image="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=500"
-                senceId="1238912"
-                duration="24 Horas lectivas"
-                progress={45}
-              />
-              <CourseCard
-                title="Normativa Sanitaria y Calidad Alimentaria (HACCP) en Peces"
-                image="https://images.unsplash.com/photo-1628595351029-c2bf17511435?w=500"
-                senceId="9918231"
-                duration="12 Horas lectivas"
-                progress={10}
-              />
-            </div>
+            {loadingInscripciones ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="h-64 bg-slate-200 animate-pulse rounded-xl" />
+                <div className="h-64 bg-slate-200 animate-pulse rounded-xl" />
+              </div>
+            ) : errorInscripciones ? (
+              <Alert variant="danger" title="Error al cargar cursos">
+                <p className="text-sm">{errorInscripciones.message}</p>
+              </Alert>
+            ) : inscripcionesActivas.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {inscripcionesActivas.map((inscripcion) => (
+                  <CourseCard
+                    key={inscripcion.id}
+                    title={inscripcion.curso_data?.nombre || 'Sin título'}
+                    image={inscripcion.curso_data?.imagen_portada || 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=500'}
+                    senceId={inscripcion.curso_data?.codigo_sence_data?.codigo}
+                    duration={`${inscripcion.curso_data?.horas_totales || 0} Horas lectivas`}
+                    progress={inscripcion.porcentaje_avance || 0}
+                    onClick={() => handleCourseClick(inscripcion.curso)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Alert variant="info" title="No tienes cursos activos">
+                <p className="text-sm">Explora el catálogo para inscribirte en nuevos cursos</p>
+              </Alert>
+            )}
           </section>
         </div>
 
@@ -184,11 +264,13 @@ export function DashboardPage() {
               </svg>
             </div>
             <div className="relative z-10">
-              <span className="text-[10px] font-bold uppercase tracking-widest bg-white/20 px-2 py-1 rounded">¡Certificación Lista!</span>
-              <p className="font-bold text-md mt-3 mb-4 leading-tight">Fundamentos de Acuicultura y Ciclo del Salmón</p>
-              <button className="w-full py-2 bg-white text-jc-blue rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors">
-                Descargar PDF
-              </button>
+              <span className="text-[10px] font-bold uppercase tracking-widest bg-white/20 px-2 py-1 rounded">
+                Progreso General
+              </span>
+              <p className="font-bold text-3xl mt-3 mb-4">{progresoGeneral}%</p>
+              <p className="text-sm text-white/80">
+                {inscripciones?.length || 0} cursos en total
+              </p>
             </div>
           </div>
 

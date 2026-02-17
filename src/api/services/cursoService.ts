@@ -6,9 +6,24 @@ import BaseService from './baseService';
 export interface CodigoSence {
   id: number;
   codigo: string;
-  nombre_accion: string;
+  nombre_curso: string;  // ← Corregido
   horas_totales: number;
   horas_disponibles?: number;
+  fecha_inicio_vigencia?: string;
+  fecha_fin_vigencia?: string;
+  estado: string;
+}
+
+export interface Modulo {
+  id: number;
+  curso: number;
+  curso_nombre?: string;
+  nombre: string;
+  descripcion: string;
+  orden: number;
+  duracion_horas: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Curso {
@@ -17,13 +32,16 @@ export interface Curso {
   codigo_sence_data?: CodigoSence;
   nombre: string;
   descripcion: string;
-  horas_totales: number;
+  horas_totales: number;  // ← Campo correcto del backend
   modalidad: 'presencial' | 'online' | 'mixto';
   nivel: 'basico' | 'intermedio' | 'avanzado';
   estado: 'activo' | 'inactivo' | 'borrador';
-  imagen_url?: string;
+  imagen_portada?: string;  // ← Corregido de imagen_url
   total_inscritos?: number;
   cupos_disponibles?: number;
+  modulos?: Modulo[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 class CursoService extends BaseService<Curso> {

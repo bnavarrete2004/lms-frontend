@@ -8,7 +8,11 @@ import { LandingPage } from '@/pages/LandingPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { DashboardPage } from '@/pages/StudentDashboardPage'; 
+import { CourseDetailPage } from '@/pages/CourseDetailPage';
 import { TestApiPage } from './pages/TestApiPage';
+import { TestServicesPage } from '@/pages/TestServicesPage';
+import { LessonPage } from '@/pages/LessonPage';
+import { AdminCursosPage } from '@/pages/AdminCursosPage';
 
 function App() {
   return (
@@ -19,6 +23,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/test-services" element={<TestServicesPage />} />
 
           {/* Protected Routes - Student */}
           <Route
@@ -40,12 +45,41 @@ function App() {
             }
           />
 
+          {/* ← AGREGAR ESTA RUTA NUEVA */}
+          <Route
+            path="/student/courses/:id"
+            element={
+              <ProtectedRoute allowedRoles={['estudiante']}>
+                <CourseDetailPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Ruta de lección individual */}
+          <Route
+            path="/student/courses/:cursoId/modules/:moduloId/lessons/:leccionId"
+            element={
+              <ProtectedRoute allowedRoles={['estudiante']}>
+                <LessonPage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Protected Routes - Admin */}
           <Route
             path="/admin/dashboard"
             element={
               <ProtectedRoute allowedRoles={['administrador']}>
                 <AdminDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/cursos"
+            element={
+              <ProtectedRoute allowedRoles={['administrador']}>
+                <AdminCursosPage />
               </ProtectedRoute>
             }
           />
