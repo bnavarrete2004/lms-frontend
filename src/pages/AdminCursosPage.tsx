@@ -1,7 +1,7 @@
 // src/pages/AdminCursosPage.tsx
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   FileSearch,
@@ -107,7 +107,7 @@ export function AdminCursosPage() {
   const [error, setError]           = useState<string | null>(null);
   const [busqueda, setBusqueda]     = useState('');
   const [filtroEstado, setFiltroEstado] = useState<'todos' | Curso['estado']>('todos');
-
+  const location = useLocation();
   // Cargar cursos
   useEffect(() => {
     async function cargar() {
@@ -122,7 +122,7 @@ export function AdminCursosPage() {
       }
     }
     cargar();
-  }, []);
+  }, [location.key]);
 
   // Filtrado local
   const cursosFiltrados = cursos.filter(c => {
