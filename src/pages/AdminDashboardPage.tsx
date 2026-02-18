@@ -128,16 +128,11 @@ export function AdminDashboardPage() {
       setErrorStats(null);
 
       try {
-        const [
-          cursosRes,
-          inscripcionesRes,
-          diplomasRes,
-          materialesPendientesRes,
-        ] = await Promise.all([
-          api.get('/cursos/', { params: { estado: 'activo' } }),
-          api.get('/inscripciones/', { params: { estado: 'en_curso' } }),
-          api.get('/diplomas/'),
-          api.get('/materiales/', { params: { estado: 'pendiente' } }),
+        const [cursosRes, inscripcionesRes, diplomasRes, materialesRes] = await Promise.all([
+          api.get('/cursos/', { params: { estado: 'activo' } }).catch(() => ({ data: { count: 0 } })),
+          api.get('/inscripciones/', { params: { estado: 'en_curso' } }).catch(() => ({ data: { count: 0 } })),
+          api.get('/diplomas/').catch(() => ({ data: { count: 0 } })),   // ← 404 → devuelve 0
+          api.get('/materiales/', { params: { estado: 'pendiente', page_size: 5 } }).catch(() => ({ data: { count: 0, results: [] } })),
         ]);
 
         // Extraer conteos (soporta paginado o array directo)

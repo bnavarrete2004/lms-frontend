@@ -17,7 +17,7 @@ import { CrearCursoWizard } from '@/pages/admin/wizard/CrearCursoWizard';
 import { AdminCursoDetailPage } from '@/pages/admin/AdminCursoDetailPage';
 import { AdminCursoEditPage } from '@/pages/admin/AdminCursoEditPage';
 import { AdminUsuariosPage } from '@/pages/AdminUsuariosPage';
-
+import { AdminLandingPage } from '@/pages/AdminLandingPage';
 
 
 function App() {
@@ -122,6 +122,15 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['administrador']}>
                   <AdminUsuariosPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/landing"
+              element={
+                <ProtectedRoute allowedRoles={['administrador']}>
+                  <AdminLandingPage />
                 </ProtectedRoute>
               }
             />
