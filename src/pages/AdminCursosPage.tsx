@@ -190,8 +190,8 @@ export function AdminCursosPage() {
   return (
     <MainLayout
       role="administrador"
-      userName={user?.nombre || 'Admin'}
-      userSubtitle="Superusuario"
+      userName={user?.nombre_completo || user?.username || 'Admin'}
+      userSubtitle={user?.rol}
       sidebarSections={sidebarSections}
       onLogout={handleLogout}
       headerTitle="Gestión de Cursos"

@@ -150,11 +150,12 @@ export function AdminDashboardPage() {
   return (
     <MainLayout
       role="administrador"
-      userName={user?.nombre || 'Admin Sistema'}
+      userName={user?.nombre_completo || user?.username || 'Admin'}
+      userSubtitle={user?.rol}
       sidebarSections={sidebarSections}
       onLogout={handleLogout}
       headerTitle="Centro de Administración"
-      notificationCount={5}
+      notificationCount={0}
     >
       <div className="space-y-8">
         

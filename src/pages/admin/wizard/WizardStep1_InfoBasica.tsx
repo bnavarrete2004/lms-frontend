@@ -1,8 +1,5 @@
 // src/pages/admin/wizard/WizardStep1_InfoBasica.tsx
-// Paso 1: Información básica del curso.
-// Campos exactos del mockup: nombre, descripción, código SENCE, horas,
-// fecha inicio, fecha fin, relatores, ciudad, plantilla diploma (opcional),
-// imagen portada (opcional).
+// Paso 1: Información básica del curso con validación de carga horaria.
 
 import { useState, useRef, useEffect } from 'react';
 import { X, ImageIcon, ChevronRight } from 'lucide-react';
@@ -68,12 +65,10 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
   // ── Cargar relatores y códigos SENCE al montar ─────────────────────────────
 
   useEffect(() => {
-    console.log('🔄 WizardStep1 montado — cargando relatores');
     async function cargarDatos() {
       const token = localStorage.getItem('access_token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      // Perfiles relator
       try {
         setLoadingRelatores(true);
         const res = await fetch('/api/perfiles-relator/', { headers });
@@ -81,13 +76,12 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
         if (res.ok) {
           setRelatores(Array.isArray(data) ? data : (data.results ?? []));
         }
-        } catch (err) {
-          console.error('❌ Error relatores:', err);  // ← agrega esto
-        } finally {
-          setLoadingRelatores(false);
-        }
+      } catch (err) {
+        console.error('❌ Error relatores:', err);
+      } finally {
+        setLoadingRelatores(false);
+      }
 
-      // Códigos SENCE
       try {
         setLoadingSence(true);
         const res = await fetch('/api/codigos-sence/', { headers });
@@ -95,8 +89,8 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
           const data = await res.json();
           setCodigosSence(Array.isArray(data) ? data : (data.results ?? []));
         }
-      } catch {
-        // select quedará vacío — no es bloqueante
+      } catch (err) {
+        console.error('❌ Error SENCE:', err);
       } finally {
         setLoadingSence(false);
       }
@@ -109,6 +103,7 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
   function validar(): boolean {
     const e: ErroresForm = {};
 
+    // Validaciones de texto
     if (!datos.nombre.trim())
       e.nombre = 'El nombre del curso es obligatorio.';
     else if (datos.nombre.trim().length < 5)
@@ -117,16 +112,38 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
     if (!datos.descripcion.trim())
       e.descripcion = 'La descripción es obligatoria.';
 
-    if (datos.horas_totales === '' || Number(datos.horas_totales) < 1)
+    // Validaciones numéricas
+    if (datos.horas_totales === '' || Number(datos.horas_totales) < 1) {
       e.horas_totales = 'Las horas totales deben ser al menos 1.';
+    }
 
+    // Validaciones de fechas
     if (!datos.fecha_inicio)
       e.fecha_inicio = 'La fecha de inicio es obligatoria.';
 
-    if (!datos.fecha_fin)
+    if (!datos.fecha_fin) {
       e.fecha_fin = 'La fecha de fin es obligatoria.';
-    else if (datos.fecha_inicio && datos.fecha_fin <= datos.fecha_inicio)
+    } else if (datos.fecha_inicio && datos.fecha_fin <= datos.fecha_inicio) {
       e.fecha_fin = 'La fecha de fin debe ser posterior a la de inicio.';
+    }
+
+    // ── Lógica de Factibilidad Temporal (Horas vs Días) ──
+    if (datos.fecha_inicio && datos.fecha_fin && datos.horas_totales !== '') {
+      const inicio = new Date(datos.fecha_inicio);
+      const fin = new Date(datos.fecha_fin);
+      
+      // Calcular diferencia en días (incluyendo el día de inicio)
+      const diffTime = fin.getTime() - inicio.getTime();
+      const dias = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      
+      if (dias > 0) {
+        const horasPorDia = Number(datos.horas_totales) / dias;
+        // Si el curso exige más de 12 horas diarias, es pedagógicamente imposible
+        if (horasPorDia > 12) {
+          e.fecha_fin = `Carga horaria imposible: ${horasPorDia.toFixed(1)}h/día. El máximo permitido son 12h diarias.`;
+        }
+      }
+    }
 
     if (datos.relatores.length === 0)
       e.relatores = 'Debes asignar al menos un relator.';
@@ -142,14 +159,12 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
     if (validar()) onSiguiente();
   }
 
-  // ── Relatores: select múltiple ─────────────────────────────────────────────
+  // ── Handlers ───────────────────────────────────────────────────────────────
 
   function handleRelatores(e: React.ChangeEvent<HTMLSelectElement>) {
     const seleccionados = Array.from(e.target.selectedOptions).map(o => Number(o.value));
     onChange({ relatores: seleccionados });
   }
-
-  // ── Imagen portada ─────────────────────────────────────────────────────────
 
   function handleImagen(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -163,7 +178,6 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
     onChange({ imagen_portada: null, imagen_url: undefined });
     if (imageInputRef.current) imageInputRef.current.value = '';
   }
-
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -183,10 +197,11 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
             className={inputCls(errores.nombre)}
             placeholder="Ej: Normativa Sanitaria y Calidad Alimentaria (HACCP)"
           />
-          {errores.nombre
-            ? <p className="text-xs text-red-500 mt-1">{errores.nombre}</p>
-            : <p className="text-xs text-slate-500 mt-1">Este nombre será visible para los estudiantes</p>
-          }
+          {errores.nombre ? (
+            <p className="text-xs text-red-500 mt-1">{errores.nombre}</p>
+          ) : (
+            <p className="text-xs text-slate-500 mt-1">Este nombre será visible para los estudiantes</p>
+          )}
         </div>
 
         {/* Descripción */}
@@ -241,10 +256,11 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
               className={inputCls(errores.horas_totales)}
               placeholder="Ej: 24"
             />
-            {errores.horas_totales
-              ? <p className="text-xs text-red-500 mt-1">{errores.horas_totales}</p>
-              : <p className="text-xs text-slate-500 mt-1">Horas lectivas totales</p>
-            }
+            {errores.horas_totales ? (
+              <p className="text-xs text-red-500 mt-1">{errores.horas_totales}</p>
+            ) : (
+              <p className="text-xs text-slate-500 mt-1">Horas lectivas totales</p>
+            )}
           </div>
         </div>
 
@@ -260,10 +276,9 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
               onChange={e => onChange({ fecha_inicio: e.target.value })}
               className={inputCls(errores.fecha_inicio)}
             />
-            {errores.fecha_inicio
-              ? <p className="text-xs text-red-500 mt-1">{errores.fecha_inicio}</p>
-              : <p className="text-xs text-slate-500 mt-1">Se puede personalizar por estudiante</p>
-            }
+            {errores.fecha_inicio && (
+              <p className="text-xs text-red-500 mt-1">{errores.fecha_inicio}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -294,20 +309,22 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
             className={inputCls(errores.relatores)}
             disabled={loadingRelatores}
           >
-            {loadingRelatores
-              ? <option disabled>Cargando relatores...</option>
-              : relatores.map(r => (
-                  <option key={r.id} value={r.id}>
-                    {r.usuario_data?.nombre_completo ?? `Relator #${r.id}`}
-                    {r.especialidad ? ` — ${r.especialidad}` : ''}
-                  </option>
-                ))
-            }
+            {loadingRelatores ? (
+              <option disabled>Cargando relatores...</option>
+            ) : (
+              relatores.map(r => (
+                <option key={r.id} value={r.id}>
+                  {r.usuario_data?.nombre_completo ?? `Relator #${r.id}`}
+                  {r.especialidad ? ` — ${r.especialidad}` : ''}
+                </option>
+              ))
+            )}
           </select>
-          {errores.relatores
-            ? <p className="text-xs text-red-500 mt-1">{errores.relatores}</p>
-            : <p className="text-xs text-slate-500 mt-1">Mantén presionado Ctrl/Cmd para seleccionar múltiples relatores</p>
-          }
+          {errores.relatores ? (
+            <p className="text-xs text-red-500 mt-1">{errores.relatores}</p>
+          ) : (
+            <p className="text-xs text-slate-500 mt-1">Mantén Ctrl/Cmd para seleccionar múltiples</p>
+          )}
         </div>
 
         {/* Ciudad */}
@@ -320,26 +337,23 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
             value={datos.ciudad}
             onChange={e => onChange({ ciudad: e.target.value })}
             className={inputCls(errores.ciudad)}
-            placeholder="Ej: Santiago, Puerto Montt, Temuco"
+            placeholder="Ej: Santiago, Puerto Montt"
           />
-          {errores.ciudad
-            ? <p className="text-xs text-red-500 mt-1">{errores.ciudad}</p>
-            : <p className="text-xs text-slate-500 mt-1">Ciudad donde se realiza la capacitación (aparecerá en diploma)</p>
-          }
+          {errores.ciudad && (
+            <p className="text-xs text-red-500 mt-1">{errores.ciudad}</p>
+          )}
         </div>
 
-        
-
-        {/* Imagen Portada (opcional) */}
+        {/* Imagen Portada */}
         <div className="mb-6">
           <label className="block text-sm font-semibold text-slate-700 mb-2">
-            Imagen de Portada <span className="text-slate-400 font-normal">(opcional)</span>
+            Imagen de Portada (opcional)
           </label>
           {datos.imagen_url ? (
             <div className="relative">
               <img
                 src={datos.imagen_url}
-                alt="Portada del curso"
+                alt="Portada"
                 className="w-full h-48 object-cover rounded-lg border border-slate-200"
               />
               <button
@@ -355,8 +369,7 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
               className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-jc-calipso transition cursor-pointer group"
             >
               <ImageIcon size={40} className="text-slate-300 mx-auto mb-3 group-hover:text-jc-calipso transition" />
-              <p className="text-sm font-medium text-slate-600">Click para subir imagen de portada</p>
-              <p className="text-xs text-slate-400 mt-1">PNG o JPG · Recomendado: 1200×600px · Máx. 5MB</p>
+              <p className="text-sm font-medium text-slate-600">Click para subir imagen</p>
             </div>
           )}
           <input

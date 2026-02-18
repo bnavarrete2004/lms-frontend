@@ -337,6 +337,38 @@ export function useCursoWizard() {
     setState(ESTADO_INICIAL);
   }, []);
 
+  // 1. Calcular total de horas asignadas a módulos
+  const totalHorasAsignadasModulos = useCallback(() => {
+  return state.modulos.reduce((acc, m) => acc + (Number(m.horas_estimadas) || 0), 0);
+  }, [state.modulos]);
+
+  // 2. Calcular total de minutos en lecciones de un módulo específico
+  const totalMinutosLeccionesModulo = useCallback((moduloLocalId: string) => {
+  return state.lecciones
+    .filter(l => l.moduloLocalId === moduloLocalId)
+    .reduce((acc, l) => acc + (Number(l.duracion_minutos) || 0), 0);
+  }, [state.lecciones]);
+
+  // 3. Validar factibilidad de fechas (Horas vs Días disponibles)
+  const validarFactibilidadTemporal = useCallback(() => {
+    if (!state.curso.fecha_inicio || !state.curso.fecha_fin || !state.curso.horas_totales) return { valida: true };
+
+    const inicio = new Date(state.curso.fecha_inicio);
+    const fin = new Date(state.curso.fecha_fin);
+    const diferenciaDias = Math.ceil((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    
+    const horasPorDia = Number(state.curso.horas_totales) / diferenciaDias;
+
+    // Si el curso exige más de 12 horas al día, es pedagógicamente imposible o sospechoso
+    if (horasPorDia > 12) {
+      return { 
+        valida: false, 
+        mensaje: `Es imposible cumplir ${state.curso.horas_totales} horas en solo ${diferenciaDias} días (${horasPorDia.toFixed(1)}h/día).` 
+      };
+    }
+    return { valida: true };
+  }, [state.curso]);
+
   // ── Return ────────────────────────────────────────────────
 
   return {
@@ -369,6 +401,11 @@ export function useCursoWizard() {
 
     // Paso 5
     publicarCurso,
+
+    // Validadores
+    totalHorasAsignadasModulos,
+    totalMinutosLeccionesModulo,
+    validarFactibilidadTemporal,
 
     // Reset
     resetWizard,

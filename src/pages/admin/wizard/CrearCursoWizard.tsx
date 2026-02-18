@@ -6,6 +6,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { WizardStep1_InfoBasica } from './WizardStep1_InfoBasica';
 import { useCursoWizard, type ModuloLocal } from '@/hooks/useCursoWizard';
+import { Logo } from '@/components/ui/Logo'; // <--- AÑADIR
+import { Avatar } from '@/components/ui/Avatar'; // <--- AÑADIR
 // Los siguientes pasos se importarán cuando se construyan:
  import { WizardStep2_Modulos }      from './WizardStep2_Modulos';
  import { WizardStep3_Lecciones }    from './WizardStep3_Lecciones';
@@ -80,95 +82,123 @@ function Stepper({ pasoActual }: { pasoActual: number }) {
 }
 
 // ── Sidebar del wizard ────────────────────────────────────────────────────────
+  function WizardSidebar({
+    curso,
+    modulos,
+    userName,
+    userSubtitle,
+    userAvatar,
+    onLogout,
+    onCancelar,
+  }: {
+    curso: any;
+    modulos: ModuloLocal[];
+    userName: string;
+    userSubtitle?: string;
+    userAvatar?: string;
+    onLogout?: () => void;
+    onCancelar: () => void;
+  }) {
+    return (
+      <aside className="w-72 bg-gradient-to-b from-jc-calipso via-jc-cyan to-jc-blue text-white flex flex-col z-20 shadow-2xl flex-shrink-0">
 
-function WizardSidebar({
-  curso,
-  modulos,
-  onCancelar,
-}: {
-  curso: ReturnType<typeof useCursoWizard>['curso'];
-  modulos: ReturnType<typeof useCursoWizard>['modulos'];
-  onCancelar: () => void;
-}) {
-  return (
-    <aside className="w-72 bg-gradient-to-b from-jc-calipso via-jc-cyan to-jc-blue text-white flex flex-col z-20 shadow-2xl flex-shrink-0">
-
-      {/* Logo */}
-      <div className="p-8">
-        <div className="flex items-center space-x-3 mb-2">
-          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-lg">
-            <span className="text-jc-blue font-bold text-xl">JC</span>
+        {/* HEADER: LOGO OFICIAL Y BADGE */}
+        <div className="p-8">
+          <Logo variant="white" size="sm" withText className="mb-2" />
+          
+          <div className="inline-flex items-center bg-white/10 px-3 py-1 rounded-full border border-white/20">
+            <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse" />
+            <span className="text-[10px] uppercase font-semibold tracking-widest text-blue-100">
+              Creando Curso
+            </span>
           </div>
-          <span className="text-xl font-bold tracking-tight">JC Digital</span>
         </div>
-        <div className="inline-flex items-center bg-white/10 px-3 py-1 rounded-full border border-white/20">
-          <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse" />
-          <span className="text-[10px] uppercase font-semibold tracking-widest text-blue-100">Creando Curso</span>
-        </div>
-      </div>
 
-      {/* Vista previa dinámica */}
-      <div className="flex-1 px-6 overflow-y-auto">
-        <h3 className="text-xs font-semibold text-blue-200 uppercase tracking-wider mb-4">Vista Previa</h3>
+        {/* CONTENIDO CENTRAL: VISTA PREVIA DINÁMICA */}
+        <div className="flex-1 px-6 overflow-y-auto">
+          <h3 className="text-[10px] font-semibold text-blue-300/50 uppercase tracking-widest mb-4">
+            Resumen de Estructura
+          </h3>
 
-        {/* Datos del curso */}
-        <div className="bg-white/10 rounded-xl p-4 border border-white/20 mb-4">
-          <p className="text-xs text-blue-200 mb-2">Información Básica</p>
-          {curso.nombre ? (
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-white truncate">{curso.nombre}</p>
-              <p className="text-xs text-white/70">
-                {curso.horas_totales ? `${curso.horas_totales} horas` : 'Sin horas'}
+          {/* Datos del curso */}
+          <div className="bg-white/10 rounded-xl p-4 border border-white/20 mb-4">
+            <p className="text-[10px] font-bold text-blue-200 uppercase mb-2">Información Base</p>
+            {curso.nombre ? (
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-white truncate">{curso.nombre}</p>
+                <p className="text-xs text-white/70">
+                  {curso.horas_totales ? `${curso.horas_totales} horas totales` : 'Horas no definidas'}
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-white/40 italic">Esperando datos del curso...</p>
+            )}
+          </div>
+
+          {/* Módulos creados */}
+          {modulos.length > 0 && (
+            <div className="bg-white/10 rounded-xl p-4 border border-white/20">
+              <p className="text-[10px] font-bold text-blue-200 uppercase mb-3">
+                Módulos ({modulos.length})
               </p>
-              {curso.ciudad && (
-                <p className="text-xs text-white/60">{curso.ciudad}</p>
-              )}
+              <div className="space-y-2">
+                {modulos.map((m: ModuloLocal, idx: number) => (
+                  <div key={m._localId} className="flex items-center space-x-2">
+                    <span className="w-5 h-5 bg-jc-calipso text-white rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                      {idx + 1}
+                    </span>
+                    <p className="text-xs text-white/80 truncate">
+                      {m.nombre || <span className="italic opacity-50">Sin nombre</span>}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
-          ) : (
-            <p className="text-sm text-white/40 italic">Aún sin información</p>
           )}
         </div>
 
-        {/* Módulos creados */}
-        {modulos.length > 0 && (
-          <div className="bg-white/10 rounded-xl p-4 border border-white/20">
-            <p className="text-xs text-blue-200 mb-3">
-              Módulos ({modulos.length})
-            </p>
-            <div className="space-y-2">
-              {modulos.map((m: ModuloLocal, idx: number) => (
-                <div key={m._localId} className="flex items-center space-x-2">
-                  <span className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0">
-                    {idx + 1}
-                  </span>
-                  <p className="text-xs text-white/80 truncate">
-                    {m.nombre || <span className="italic opacity-50">Sin nombre</span>}
-                  </p>
-                </div>
-              ))}
+        {/* FOOTER: USUARIO Y LOGOUT (DISEÑO OFICIAL) */}
+        <div className="p-6 bg-black/20 m-4 rounded-xl">
+          <div className="flex items-center mb-3">
+            <Avatar 
+              src={userAvatar} 
+              name={userName} 
+              size="md" 
+              className="mr-3" 
+            />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate">{userName}</p>
+              {userSubtitle && (
+                <p className="text-[10px] text-blue-200 truncate">{userSubtitle}</p>
+              )}
             </div>
           </div>
-        )}
-      </div>
-
-      {/* Botón cancelar */}
-      <div className="p-6">
-        <button
-          onClick={onCancelar}
-          className="w-full py-2 bg-red-500/20 border border-red-400/30 text-red-100 rounded-lg text-sm font-semibold hover:bg-red-500/30 transition-colors"
-        >
-          Cancelar Creación
-        </button>
-      </div>
-    </aside>
-  );
-}
-
+          
+          <div className="space-y-2">
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="block w-full py-2 bg-red-500/20 border border-red-400/30 text-red-100 rounded-lg text-xs font-semibold hover:bg-red-500/30 transition-colors text-center"
+              >
+                Cerrar Sesión
+              </button>
+            )}
+            <button
+              onClick={onCancelar}
+              className="block w-full py-2 bg-white/5 border border-white/10 text-white rounded-lg text-[10px] font-bold uppercase tracking-tighter hover:bg-white/10 transition-colors text-center"
+            >
+              Cancelar Creación
+            </button>
+          </div>
+        </div>
+      </aside>
+    );
+  }
 // ── Contenedor principal ──────────────────────────────────────────────────────
 
 export function CrearCursoWizard() {
   const navigate  = useNavigate();
-  const { }  = useAuth();
+  const { user, logout }  = useAuth();
   const wizard    = useCursoWizard();
 
   const handleCancelar = () => {
@@ -176,6 +206,11 @@ export function CrearCursoWizard() {
       wizard.resetWizard();
       navigate('/admin/cursos');
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   const handlePublicar = async (estado: 'activo' | 'borrador' | 'inactivo') => {
@@ -201,6 +236,7 @@ export function CrearCursoWizard() {
         return (
           <WizardStep2_Modulos
             modulos={wizard.modulos}
+            horasMeta={Number(wizard.curso.horas_totales)}
             onAgregar={wizard.agregarModulo}
             onActualizar={wizard.actualizarModulo}
             onEliminar={wizard.eliminarModulo}
@@ -257,6 +293,13 @@ export function CrearCursoWizard() {
       <WizardSidebar
         curso={wizard.curso}
         modulos={wizard.modulos}
+        userName={user?.nombre_completo || 
+    (user?.nombre ? `${user.nombre} ${user.apellido}` : '') || 
+    user?.username || 
+    'Administrador'} // <--- PASAR NOMBRE
+        userSubtitle="Superusuario"
+        userAvatar={user?.avatar} 
+        onLogout={handleLogout} 
         onCancelar={handleCancelar}
       />
 
