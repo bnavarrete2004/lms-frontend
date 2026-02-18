@@ -258,7 +258,7 @@ export function useCursoWizard() {
 
   // ── Paso 5: Publicar (único momento en que toca el backend) ──
 
-  const publicarCurso = useCallback(async (): Promise<Curso | null> => {
+  const publicarCurso = useCallback(async (estadoSeleccionado: 'activo' | 'borrador' | 'inactivo'): Promise<Curso | null> => {
     setState(s => ({ ...s, guardando: true, errorGuardado: null }));
 
     try {
@@ -269,7 +269,7 @@ export function useCursoWizard() {
         nombre: curso.nombre,
         descripcion: curso.descripcion,
         horas_totales: Number(curso.horas_totales),
-        estado: 'activo',
+        estado: estadoSeleccionado,
         codigo_sence_curso: curso.codigo_sence
           ? `SENCE-${curso.codigo_sence}`
           : `CURSO-${Date.now()}`,

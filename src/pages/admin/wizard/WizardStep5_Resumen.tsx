@@ -16,7 +16,7 @@ interface Props {
   lecciones: LeccionLocal[];
   guardando: boolean;
   leccionesPorModulo: (moduloLocalId: string) => LeccionLocal[];
-  onPublicar: () => Promise<void>;
+  onPublicar: (estado:OpcionPublicacion) => Promise<void>;
   onAnterior: () => void;
   onIrAPaso: (paso: 1 | 2 | 3 | 4 | 5) => void;
 }
@@ -95,7 +95,7 @@ export function WizardStep5_Resumen({
 
     if (!window.confirm(confirmMsg)) return;
 
-    await onPublicar();
+    await onPublicar(opcion);
     setPublicado(true);
   }
 

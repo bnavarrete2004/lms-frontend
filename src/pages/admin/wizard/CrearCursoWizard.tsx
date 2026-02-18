@@ -178,8 +178,8 @@ export function CrearCursoWizard() {
     }
   };
 
-  const handlePublicar = async () => {
-    const curso = await wizard.publicarCurso();
+  const handlePublicar = async (estado: 'activo' | 'borrador' | 'inactivo') => {
+    const curso = await wizard.publicarCurso(estado);
     if (curso) {
       navigate('/admin/cursos');
     }
