@@ -23,6 +23,9 @@ export interface DatosCurso {
   modalidad: 'presencial' | 'online' | 'mixto' | '';
   nivel: 'basico' | 'intermedio' | 'avanzado' | '';
   ciudad: string;
+  fecha_inicio: string;              // ISO date string 'YYYY-MM-DD'
+  fecha_fin: string;                 // ISO date string 'YYYY-MM-DD'
+  relatores: number[];               // IDs de usuarios con rol relator
   imagen_portada: File | null;       // solo en memoria, se sube al publicar
   imagen_url?: string;               // preview local (URL.createObjectURL)
 }
@@ -73,6 +76,9 @@ const CURSO_INICIAL: DatosCurso = {
   modalidad: '',
   nivel: '',
   ciudad: '',
+  fecha_inicio: '',
+  fecha_fin: '',
+  relatores: [],
   imagen_portada: null,
   imagen_url: undefined,
 };

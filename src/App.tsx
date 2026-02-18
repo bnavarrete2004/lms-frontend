@@ -13,6 +13,7 @@ import { TestApiPage } from './pages/TestApiPage';
 import { TestServicesPage } from '@/pages/TestServicesPage';
 import { LessonPage } from '@/pages/LessonPage';
 import { AdminCursosPage } from '@/pages/AdminCursosPage';
+import { CrearCursoWizard } from '@/pages/admin/wizard/CrearCursoWizard';
 
 function App() {
   return (
@@ -83,6 +84,15 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route
+              path="/admin/cursos/crear"
+              element={
+                <ProtectedRoute allowedRoles={['administrador']}>
+                  <CrearCursoWizard />
+                </ProtectedRoute>
+              }
+            />
 
           <Route path="/test-api" element={<TestApiPage />} />
 

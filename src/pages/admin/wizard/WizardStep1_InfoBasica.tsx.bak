@@ -1,0 +1,325 @@
+// src/pages/admin/wizard/WizardStep1_InfoBasica.tsx
+// Paso 1: Información básica del curso.
+// Maneja su propio estado de UI (preview imagen, errores de validación).
+// Los datos se sincronizan al hook useCursoWizard vía prop onChange.
+
+import { useState, useRef, useEffect } from 'react';
+import { Upload, X, ImageIcon, ChevronRight } from 'lucide-react';
+import type { DatosCurso } from '@/hooks/useCursoWizard';
+import { cursoService, type CodigoSence } from '@/api/services/cursoService';
+
+// ── Tipos ─────────────────────────────────────────────────────────────────────
+
+interface Props {
+  datos: DatosCurso;
+  onChange: (campos: Partial<DatosCurso>) => void;
+  onSiguiente: () => void;
+  onCancelar: () => void;
+}
+
+interface ErroresForm {
+  nombre?: string;
+  descripcion?: string;
+  horas_totales?: string;
+  modalidad?: string;
+  nivel?: string;
+  ciudad?: string;
+  fecha_inicio?: string;
+  fecha_fin?: string;
+}
+
+// ── Helper: clase base de inputs ──────────────────────────────────────────────
+
+function inputCls(error?: string) {
+  return `w-full px-4 py-3 border rounded-lg outline-none transition focus:ring-2
+    ${error
+      ? 'border-red-400 focus:ring-red-200 focus:border-red-400'
+      : 'border-slate-300 focus:ring-jc-calipso/30 focus:border-jc-calipso'
+    }`;
+}
+
+// ── Componente ────────────────────────────────────────────────────────────────
+
+export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancelar }: Props) {
+  const [errores, setErrores]           = useState<ErroresForm>({});
+  const [codigosSence, setCodigosSence] = useState<CodigoSence[]>([]);
+  const [loadingSence, setLoadingSence] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // Cargar códigos SENCE disponibles
+  useEffect(() => {
+    async function cargar() {
+      try {
+        setLoadingSence(true);
+        // CodigoSence está en el mismo cursoService
+        const res = await fetch('/api/codigos-sence/', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCodigosSence(Array.isArray(data) ? data : data.results ?? []);
+        }
+      } catch {
+        // Si falla, el select queda vacío y el campo es opcional
+      } finally {
+        setLoadingSence(false);
+      }
+    }
+    cargar();
+  }, []);
+
+  // ── Validación ──────────────────────────────────────────────────────────────
+
+  function validar(): boolean {
+    const e: ErroresForm = {};
+
+    if (!datos.nombre.trim())
+      e.nombre = 'El nombre del curso es obligatorio.';
+    else if (datos.nombre.trim().length < 5)
+      e.nombre = 'El nombre debe tener al menos 5 caracteres.';
+
+    if (!datos.descripcion.trim())
+      e.descripcion = 'La descripción es obligatoria.';
+
+    if (datos.horas_totales === '' || Number(datos.horas_totales) < 1)
+      e.horas_totales = 'Las horas totales deben ser al menos 1.';
+
+    if (!datos.modalidad)
+      e.modalidad = 'Selecciona una modalidad.';
+
+    if (!datos.nivel)
+      e.nivel = 'Selecciona un nivel.';
+
+    if (!datos.ciudad.trim())
+      e.ciudad = 'La ciudad es obligatoria (aparece en el diploma).';
+
+    setErrores(e);
+    return Object.keys(e).length === 0;
+  }
+
+  function handleSiguiente() {
+    if (validar()) onSiguiente();
+  }
+
+  // ── Manejo de imagen ────────────────────────────────────────────────────────
+
+  function handleImagen(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    onChange({ imagen_portada: file, imagen_url: url });
+  }
+
+  function quitarImagen() {
+    if (datos.imagen_url) URL.revokeObjectURL(datos.imagen_url);
+    onChange({ imagen_portada: null, imagen_url: undefined });
+    if (imageInputRef.current) imageInputRef.current.value = '';
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+
+        {/* ── Nombre ────────────────────────────────────────────────────── */}
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-slate-700 mb-2">
+            Nombre del Curso <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={datos.nombre}
+            onChange={e => onChange({ nombre: e.target.value })}
+            className={inputCls(errores.nombre)}
+            placeholder="Ej: Normativa Sanitaria y Calidad Alimentaria (HACCP)"
+          />
+          {errores.nombre
+            ? <p className="text-xs text-red-500 mt-1">{errores.nombre}</p>
+            : <p className="text-xs text-slate-500 mt-1">Este nombre será visible para los estudiantes</p>
+          }
+        </div>
+
+        {/* ── Descripción ───────────────────────────────────────────────── */}
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-slate-700 mb-2">
+            Descripción del Curso <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            rows={4}
+            value={datos.descripcion}
+            onChange={e => onChange({ descripcion: e.target.value })}
+            className={inputCls(errores.descripcion) + ' resize-none'}
+            placeholder="Describe los objetivos y contenidos principales del curso..."
+          />
+          {errores.descripcion && (
+            <p className="text-xs text-red-500 mt-1">{errores.descripcion}</p>
+          )}
+        </div>
+
+        {/* ── Código SENCE + Horas ──────────────────────────────────────── */}
+        <div className="grid grid-cols-2 gap-6 mb-6">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              Código SENCE <span className="text-slate-400 font-normal">(opcional)</span>
+            </label>
+            <select
+              value={datos.codigo_sence ?? ''}
+              onChange={e => onChange({ codigo_sence: e.target.value ? Number(e.target.value) : null })}
+              className={inputCls()}
+              disabled={loadingSence}
+            >
+              <option value="">Sin código SENCE</option>
+              {codigosSence.map(cs => (
+                <option key={cs.id} value={cs.id}>
+                  {cs.codigo} — {cs.nombre_curso} ({cs.horas_totales}h)
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-500 mt-1">
+              {loadingSence ? 'Cargando códigos...' : 'Solo si el curso tiene franquicia SENCE'}
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              Horas Totales <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              min={1}
+              value={datos.horas_totales}
+              onChange={e => onChange({ horas_totales: e.target.value === '' ? '' : Number(e.target.value) })}
+              className={inputCls(errores.horas_totales)}
+              placeholder="Ej: 24"
+            />
+            {errores.horas_totales
+              ? <p className="text-xs text-red-500 mt-1">{errores.horas_totales}</p>
+              : <p className="text-xs text-slate-500 mt-1">Horas lectivas totales</p>
+            }
+          </div>
+        </div>
+
+        {/* ── Modalidad + Nivel ────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 gap-6 mb-6">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              Modalidad <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={datos.modalidad}
+              onChange={e => onChange({ modalidad: e.target.value as DatosCurso['modalidad'] })}
+              className={inputCls(errores.modalidad)}
+            >
+              <option value="">Selecciona modalidad</option>
+              <option value="presencial">Presencial</option>
+              <option value="online">Online</option>
+              <option value="mixto">Mixto</option>
+            </select>
+            {errores.modalidad && (
+              <p className="text-xs text-red-500 mt-1">{errores.modalidad}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              Nivel <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={datos.nivel}
+              onChange={e => onChange({ nivel: e.target.value as DatosCurso['nivel'] })}
+              className={inputCls(errores.nivel)}
+            >
+              <option value="">Selecciona nivel</option>
+              <option value="basico">Básico</option>
+              <option value="intermedio">Intermedio</option>
+              <option value="avanzado">Avanzado</option>
+            </select>
+            {errores.nivel && (
+              <p className="text-xs text-red-500 mt-1">{errores.nivel}</p>
+            )}
+          </div>
+        </div>
+
+        {/* ── Ciudad ───────────────────────────────────────────────────── */}
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-slate-700 mb-2">
+            Ciudad <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={datos.ciudad}
+            onChange={e => onChange({ ciudad: e.target.value })}
+            className={inputCls(errores.ciudad)}
+            placeholder="Ej: Santiago, Puerto Montt, Temuco"
+          />
+          {errores.ciudad
+            ? <p className="text-xs text-red-500 mt-1">{errores.ciudad}</p>
+            : <p className="text-xs text-slate-500 mt-1">Ciudad donde se realiza la capacitación (aparecerá en el diploma)</p>
+          }
+        </div>
+
+        {/* ── Imagen de Portada (opcional) ──────────────────────────────── */}
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-slate-700 mb-2">
+            Imagen de Portada <span className="text-slate-400 font-normal">(opcional)</span>
+          </label>
+
+          {datos.imagen_url ? (
+            /* Preview de imagen seleccionada */
+            <div className="relative">
+              <img
+                src={datos.imagen_url}
+                alt="Portada del curso"
+                className="w-full h-48 object-cover rounded-lg border border-slate-200"
+              />
+              <button
+                type="button"
+                onClick={quitarImagen}
+                className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition shadow"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            /* Zona de upload */
+            <div
+              onClick={() => imageInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-jc-calipso transition cursor-pointer group"
+            >
+              <ImageIcon size={40} className="text-slate-300 mx-auto mb-3 group-hover:text-jc-calipso transition" />
+              <p className="text-sm font-medium text-slate-600">Click para subir imagen de portada</p>
+              <p className="text-xs text-slate-400 mt-1">PNG o JPG · Recomendado: 1200×600px · Máx. 5MB</p>
+            </div>
+          )}
+
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/jpg"
+            className="hidden"
+            onChange={handleImagen}
+          />
+        </div>
+
+        {/* ── Botones de navegación ────────────────────────────────────── */}
+        <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={onCancelar}
+            className="px-6 py-3 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleSiguiente}
+            className="inline-flex items-center px-8 py-3 bg-jc-blue text-white rounded-lg font-semibold hover:bg-jc-blue-dark transition shadow-sm"
+          >
+            Siguiente: Crear Módulos
+            <ChevronRight size={20} className="ml-2" />
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}

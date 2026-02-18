@@ -11,7 +11,7 @@ export function Logo({ variant = 'white', size = 'md', withText = false, classNa
   const logoFiles = {
     white: '/src/assets/images/logo_jc_white_transparent_md.png',
     color: '/src/assets/images/logo_jc_color_transparent.png',
-    blue: '/src/assets/images/logo_jc_blue_transparent_sm.png',
+    blue:  '/src/assets/images/logo_jc_blue_sm.png', 
     black: '/src/assets/images/logo_jc_black_md.png',
   };
   
