@@ -121,7 +121,8 @@ export class BaseService<T> {
    * @returns Recurso encontrado
    */
   async getById(id: number | string): Promise<T> {
-    const response: AxiosResponse<T> = await api.get(`${this.endpoint}/${id}/`);
+    const base = this.endpoint.endsWith('/') ? this.endpoint.slice(0, -1) : this.endpoint;
+    const response: AxiosResponse<T> = await api.get(`${base}/${id}/`);
     return response.data;
   }
 
@@ -152,10 +153,8 @@ export class BaseService<T> {
    * @returns Recurso actualizado
    */
   async update(id: number | string, data: Partial<T>): Promise<T> {
-    const response: AxiosResponse<T> = await api.put(
-      `${this.endpoint}/${id}/`,
-      data
-    );
+    const base = this.endpoint.endsWith('/') ? this.endpoint.slice(0, -1) : this.endpoint;
+    const response: AxiosResponse<T> = await api.put(`${base}/${id}/`, data);
     return response.data;
   }
 
@@ -171,10 +170,8 @@ export class BaseService<T> {
    * @returns Recurso actualizado
    */
   async patch(id: number | string, data: Partial<T>): Promise<T> {
-    const response: AxiosResponse<T> = await api.patch(
-      `${this.endpoint}/${id}/`,
-      data
-    );
+   const base = this.endpoint.endsWith('/') ? this.endpoint.slice(0, -1) : this.endpoint;
+    const response: AxiosResponse<T> = await api.patch(`${base}/${id}/`, data);
     return response.data;
   }
 
@@ -188,7 +185,8 @@ export class BaseService<T> {
    * @param id - ID del recurso a eliminar
    */
   async delete(id: number | string): Promise<void> {
-    await api.delete(`${this.endpoint}/${id}/`);
+    const base = this.endpoint.endsWith('/') ? this.endpoint.slice(0, -1) : this.endpoint;
+    await api.delete(`${base}/${id}/`);
   }
 
   // ============================================

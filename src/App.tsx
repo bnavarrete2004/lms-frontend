@@ -14,6 +14,8 @@ import { TestServicesPage } from '@/pages/TestServicesPage';
 import { LessonPage } from '@/pages/LessonPage';
 import { AdminCursosPage } from '@/pages/AdminCursosPage';
 import { CrearCursoWizard } from '@/pages/admin/wizard/CrearCursoWizard';
+import { AdminCursoDetailPage } from '@/pages/admin/AdminCursoDetailPage';
+import { AdminCursoEditPage } from '@/pages/admin/AdminCursoEditPage';
 
 
 
@@ -93,6 +95,23 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['administrador']}>
                   <CrearCursoWizard />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/cursos/:id"
+              element={
+                <ProtectedRoute allowedRoles={['administrador']}>
+                  <AdminCursoDetailPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/cursos/:id/editar"
+              element={
+                <ProtectedRoute allowedRoles={['administrador']}>
+                  <AdminCursoEditPage />
                 </ProtectedRoute>
               }
             />

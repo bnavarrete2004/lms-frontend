@@ -18,14 +18,19 @@ import {
   Star,
   TrendingUp,
   CheckCircle2,
+  // Iconos necesarios para la lógica de modales
+  X,
+  Trash2,
+  Save
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { cursoService, type Curso } from '@/api/services/cursoService';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Genera iniciales a partir del nombre del curso */
 function getIniciales(nombre: string): string {
   return nombre
     .split(' ')
@@ -35,7 +40,6 @@ function getIniciales(nombre: string): string {
     .join('');
 }
 
-/** Paleta de colores para los avatares de curso (rota por índice) */
 const COLORES_AVATAR = [
   'from-blue-500 to-blue-600',
   'from-green-500 to-green-600',
@@ -47,7 +51,6 @@ const COLORES_AVATAR = [
   'from-pink-500 to-pink-600',
 ];
 
-/** Badge de estado del curso */
 function EstadoBadge({ estado }: { estado: Curso['estado'] }) {
   const map = {
     activo:   { label: 'Activo',    cls: 'bg-green-100 text-green-700' },
@@ -61,8 +64,6 @@ function EstadoBadge({ estado }: { estado: Curso['estado'] }) {
     </span>
   );
 }
-
-// ── Secciones del sidebar (igual que AdminDashboardPage pero con Gestión Cursos activo) ──
 
 function useSidebarSections() {
   return [
@@ -100,48 +101,91 @@ export function AdminCursosPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const sidebarSections = useSidebarSections();
+  const location = useLocation();
 
-  // Estado
+  // Estado de Datos
   const [cursos, setCursos]         = useState<Curso[]>([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState<string | null>(null);
   const [busqueda, setBusqueda]     = useState('');
   const [filtroEstado, setFiltroEstado] = useState<'todos' | Curso['estado']>('todos');
-  const location = useLocation();
-  // Cargar cursos
-  useEffect(() => {
-    async function cargar() {
-      try {
-        setLoading(true);
-        const data = await cursoService.getAll();
-        setCursos(data);
-      } catch {
-        setError('No se pudieron cargar los cursos. Intenta nuevamente.');
-      } finally {
-        setLoading(false);
-      }
+
+  // Estados para Modales
+  const [cursoSeleccionado, setCursoSeleccionado] = useState<Curso | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const cargarCursos = async () => {
+    try {
+      setLoading(true);
+      const data = await cursoService.getAll();
+      setCursos(data);
+    } catch {
+      setError('No se pudieron cargar los cursos. Intenta nuevamente.');
+    } finally {
+      setLoading(false);
     }
-    cargar();
+  };
+
+  useEffect(() => {
+    cargarCursos();
   }, [location.key]);
 
-  // Filtrado local
+  // Handlers para Modales
+  const handleOpenVer = (curso: Curso) => {
+    setCursoSeleccionado(curso);
+    setIsEditMode(false);
+  };
+
+  const handleOpenEditar = (curso: Curso) => {
+    setCursoSeleccionado({ ...curso }); // Clon para edición limpia
+    setIsEditMode(true);
+  };
+
+  const handleCloseModal = () => {
+    setCursoSeleccionado(null);
+    setIsEditMode(false);
+  };
+
+  const handleGuardarCambios = async () => {
+    if (!cursoSeleccionado) return;
+    setIsSaving(true);
+    try {
+      await cursoService.patch(cursoSeleccionado.id, cursoSeleccionado);
+      await cargarCursos();
+      handleCloseModal();
+    } catch {
+      alert("Error al actualizar el curso");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEliminarCurso = async () => {
+    if (!cursoSeleccionado) return;
+    if (!window.confirm(`¿Estás seguro de eliminar el curso "${cursoSeleccionado.nombre}"?`)) return;
+    
+    try {
+      await cursoService.delete(cursoSeleccionado.id);
+      await cargarCursos();
+      handleCloseModal();
+    } catch {
+      alert("No se pudo eliminar el curso");
+    }
+  };
+
+  const handleLogout = () => { logout(); navigate('/login'); };
+
+  // Filtrado
   const cursosFiltrados = cursos.filter(c => {
     const coincideBusqueda = c.nombre.toLowerCase().includes(busqueda.toLowerCase());
     const coincideEstado   = filtroEstado === 'todos' || c.estado === filtroEstado;
     return coincideBusqueda && coincideEstado;
   });
 
-  // Métricas derivadas
-  const totalCursos    = cursos.length;
-  const cursosActivos  = cursos.filter(c => c.estado === 'activo').length;
-  const totalEstudiantes = cursos.reduce((acc, c) => acc + (c.total_inscritos ?? 0), 0);
-
-  // Top cursos por inscritos (para la sección de análisis)
   const topPorInscritos = [...cursos]
     .sort((a, b) => (b.total_inscritos ?? 0) - (a.total_inscritos ?? 0))
     .slice(0, 3);
-
-  const handleLogout = () => { logout(); navigate('/login'); };
 
   return (
     <MainLayout
@@ -156,7 +200,7 @@ export function AdminCursosPage() {
     >
       <div className="space-y-8">
 
-        {/* ── Botón Crear Curso ─────────────────────────────────────────── */}
+        {/* Botón Crear */}
         <div>
           <button
             onClick={() => navigate('/admin/cursos/crear')}
@@ -167,13 +211,13 @@ export function AdminCursosPage() {
           </button>
         </div>
 
-        {/* ── Métricas ─────────────────────────────────────────────────── */}
+        {/* Métricas */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <MetricCard
             icon={<BookOpen size={24} className="text-blue-600" />}
             iconBg="bg-blue-100"
             label="Cursos totales"
-            valor={loading ? '—' : String(totalCursos)}
+            valor={loading ? '—' : String(cursos.length)}
             tag="Total"
             tagColor="text-blue-600"
           />
@@ -181,7 +225,7 @@ export function AdminCursosPage() {
             icon={<CheckCircle2 size={24} className="text-green-600" />}
             iconBg="bg-green-100"
             label="Cursos en progreso"
-            valor={loading ? '—' : String(cursosActivos)}
+            valor={loading ? '—' : String(cursos.filter(c => c.estado === 'activo').length)}
             tag="Activos"
             tagColor="text-green-600"
           />
@@ -189,7 +233,7 @@ export function AdminCursosPage() {
             icon={<Users size={24} className="text-purple-600" />}
             iconBg="bg-purple-100"
             label="Estudiantes totales"
-            valor={loading ? '—' : String(totalEstudiantes)}
+            valor={loading ? '—' : String(cursos.reduce((acc, c) => acc + (c.total_inscritos ?? 0), 0))}
             tag="Inscritos"
             tagColor="text-purple-600"
           />
@@ -203,155 +247,190 @@ export function AdminCursosPage() {
           />
         </div>
 
-        {/* ── Tabla de Cursos ───────────────────────────────────────────── */}
+        {/* Tabla */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-
-          {/* Cabecera de la tabla */}
-          <div className="p-6 border-b border-slate-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <BookOpen size={22} className="text-blue-600" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-800">Cursos Activos</h2>
-                  <p className="text-sm text-slate-500">Cursos actualmente disponibles en la plataforma</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <input
-                  type="text"
-                  placeholder="Buscar curso..."
-                  value={busqueda}
-                  onChange={e => setBusqueda(e.target.value)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-jc-blue"
-                />
-                <select
-                  value={filtroEstado}
-                  onChange={e => setFiltroEstado(e.target.value as typeof filtroEstado)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-jc-blue"
-                >
-                  <option value="todos">Todos los estados</option>
-                  <option value="activo">Activos</option>
-                  <option value="borrador">En borrador</option>
-                  <option value="inactivo">Inactivos</option>
-                </select>
-              </div>
+          <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+            <h2 className="text-xl font-bold text-slate-800">Cursos Activos</h2>
+            <div className="flex gap-3">
+              <input
+                type="text"
+                placeholder="Buscar curso..."
+                value={busqueda}
+                onChange={e => setBusqueda(e.target.value)}
+                className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-jc-blue outline-none"
+              />
+              <select
+                value={filtroEstado}
+                onChange={e => setFiltroEstado(e.target.value as any)}
+                className="px-4 py-2 border border-slate-300 rounded-lg text-sm outline-none"
+              >
+                <option value="todos">Todos los estados</option>
+                <option value="activo">Activo</option>
+                <option value="borrador">Borrador</option>
+              </select>
             </div>
           </div>
 
-          {/* Estado de carga / error / vacío */}
-          {loading && (
-            <div className="py-16 text-center text-slate-400 text-sm">Cargando cursos...</div>
-          )}
-          {error && !loading && (
-            <div className="py-16 text-center text-red-500 text-sm">{error}</div>
-          )}
-          {!loading && !error && cursosFiltrados.length === 0 && (
-            <div className="py-16 text-center text-slate-400 text-sm">
-              {busqueda || filtroEstado !== 'todos'
-                ? 'Sin resultados para los filtros aplicados.'
-                : 'Aún no hay cursos creados. ¡Crea el primero!'}
-            </div>
-          )}
-
-          {/* Tabla */}
-          {!loading && !error && cursosFiltrados.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    {['Curso', 'Estado', 'Inscritos', 'Progreso Prom.', 'Popularidad', 'Tasa Éxito', 'Acciones'].map(col => (
-                      <th key={col} className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {cursosFiltrados.map((curso, idx) => (
-                    <FilaCurso
-                      key={curso.id}
-                      curso={curso}
-                      colorAvatar={COLORES_AVATAR[idx % COLORES_AVATAR.length]}
-                      onVer={() => navigate(`/admin/cursos/${curso.id}`)}
-                      onEditar={() => navigate(`/admin/cursos/${curso.id}/editar`)}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-slate-50 border-b">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Curso</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Estado</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Inscritos</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {cursosFiltrados.map((curso, idx) => (
+                  <FilaCurso
+                    key={curso.id}
+                    curso={curso}
+                    colorAvatar={COLORES_AVATAR[idx % COLORES_AVATAR.length]}
+                    onVer={() => handleOpenVer(curso)}
+                    onEditar={() => handleOpenEditar(curso)}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* ── Sección Análisis ──────────────────────────────────────────── */}
+        {/* Sección Análisis */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-          {/* Cursos más populares */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
               <TrendingUp size={20} className="mr-2 text-amber-600" />
               Cursos Más Populares
             </h3>
-            {loading
-              ? <p className="text-sm text-slate-400">Cargando...</p>
-              : topPorInscritos.length === 0
-                ? <p className="text-sm text-slate-400">Sin datos aún.</p>
-                : (
-                  <div className="space-y-4">
-                    {topPorInscritos.map((curso, idx) => (
-                      <div key={curso.id} className={`flex items-center justify-between ${idx < topPorInscritos.length - 1 ? 'pb-4 border-b border-slate-100' : ''}`}>
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-10 h-10 bg-gradient-to-br ${COLORES_AVATAR[idx]} rounded-lg flex items-center justify-center`}>
-                            <span className="text-white font-bold text-xs">{getIniciales(curso.nombre)}</span>
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-slate-800">{curso.nombre}</p>
-                            <p className="text-xs text-slate-500">{curso.total_inscritos ?? 0} estudiantes</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-amber-600">— ⭐</p>
-                          <p className="text-xs text-slate-500">sin calif.</p>
-                        </div>
-                      </div>
-                    ))}
+            <div className="space-y-4">
+              {topPorInscritos.map((c, idx) => (
+                <div key={c.id} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-8 h-8 rounded bg-gradient-to-br ${COLORES_AVATAR[idx]} flex items-center justify-center text-white text-[10px] font-bold`}>
+                      {getIniciales(c.nombre)}
+                    </div>
+                    <span className="text-sm font-medium text-slate-700">{c.nombre}</span>
                   </div>
-                )
-            }
-          </div>
-
-          {/* Mayor tasa de éxito — placeholder hasta que el backend lo provea */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
-              <CheckCircle2 size={20} className="mr-2 text-green-600" />
-              Mayor Tasa de Éxito
-            </h3>
-            <div className="flex flex-col items-center justify-center py-8 text-slate-400">
-              <BarChart3 size={40} className="mb-3 opacity-30" />
-              <p className="text-sm">Disponible cuando el backend exponga datos de aprobación por curso.</p>
+                  <span className="text-xs font-bold text-slate-500">{c.total_inscritos} alumnos</span>
+                </div>
+              ))}
             </div>
           </div>
-
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col justify-center items-center text-slate-400">
+             <BarChart3 size={40} className="mb-2 opacity-20" />
+             <p className="text-sm">Datos adicionales de rendimiento próximamente</p>
+          </div>
         </div>
-
       </div>
+
+      {/* ── MODAL OVERLAY (PREVIEW / EDIT) ── */}
+      {cursoSeleccionado && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-slate-50">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                {isEditMode ? <Pencil size={18} className="text-amber-500" /> : <Eye size={18} className="text-jc-blue" />}
+                {isEditMode ? 'Editar Curso' : 'Detalles del Curso'}
+              </h3>
+              <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              {isEditMode ? (
+                <>
+                  <Input 
+                    label="Nombre del Curso" 
+                    value={cursoSeleccionado.nombre} 
+                    onChange={e => setCursoSeleccionado({...cursoSeleccionado, nombre: e.target.value})} 
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input 
+                      label="Horas Totales" 
+                      type="number"
+                      value={cursoSeleccionado.horas_totales} 
+                      onChange={e => setCursoSeleccionado({...cursoSeleccionado, horas_totales: Number(e.target.value)})} 
+                    />
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+                      <select 
+                        className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-jc-blue/20"
+                        value={cursoSeleccionado.estado}
+                        onChange={e => setCursoSeleccionado({...cursoSeleccionado, estado: e.target.value as any})}
+                      >
+                        <option value="activo">Activo</option>
+                        <option value="borrador">Borrador</option>
+                        <option value="inactivo">Inactivo</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
+                    <textarea 
+                      className="w-full border rounded-lg p-3 h-32 resize-none outline-none focus:ring-2 focus:ring-jc-blue/20"
+                      value={cursoSeleccionado.descripcion || ''}
+                      onChange={e => setCursoSeleccionado({...cursoSeleccionado, descripcion: e.target.value})}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Nombre del Programa</p>
+                    <p className="text-lg font-bold text-slate-800">{cursoSeleccionado.nombre}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">Carga Horaria</p>
+                      <p className="font-bold text-jc-blue">{cursoSeleccionado.horas_totales} Horas</p>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">SENCE</p>
+                      <p className="font-bold text-jc-calipso">{cursoSeleccionado.codigo_sence_data?.codigo || 'Sin Código'}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Descripción</p>
+                    <p className="text-sm text-slate-600 leading-relaxed max-h-40 overflow-y-auto">{cursoSeleccionado.descripcion || 'Sin descripción disponible.'}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t flex justify-between items-center">
+              {isEditMode ? (
+                <>
+                  <button onClick={handleEliminarCurso} className="flex items-center text-red-500 hover:text-red-700 text-sm font-bold">
+                    <Trash2 size={16} className="mr-1.5" /> Eliminar
+                  </button>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" onClick={handleCloseModal}>Cancelar</Button>
+                    <Button onClick={handleGuardarCambios} isLoading={isSaving}>
+                      <Save size={16} className="mr-2" /> Guardar
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <Button className="w-full" onClick={() => setIsEditMode(true)}>
+                  <Pencil size={16} className="mr-2" /> Pasar a Edición Rápida
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </MainLayout>
   );
 }
 
-// ── Subcomponentes ────────────────────────────────────────────────────────────
+// ── Subcomponentes Internos ───────────────────────────────────────────────────
 
-function MetricCard({
-  icon, iconBg, label, valor, tag, tagColor,
-}: {
-  icon: React.ReactNode;
-  iconBg: string;
-  label: string;
-  valor: string;
-  tag: string;
-  tagColor: string;
-}) {
+function MetricCard({ icon, iconBg, label, valor, tag, tagColor }: any) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
       <div className="flex items-center justify-between mb-4">
@@ -366,21 +445,9 @@ function MetricCard({
   );
 }
 
-function FilaCurso({
-  curso,
-  colorAvatar,
-  onVer,
-  onEditar,
-}: {
-  curso: Curso;
-  colorAvatar: string;
-  onVer: () => void;
-  onEditar: () => void;
-}) {
+function FilaCurso({ curso, colorAvatar, onVer, onEditar }: any) {
   return (
     <tr className="hover:bg-slate-50 transition">
-
-      {/* Nombre */}
       <td className="px-6 py-4">
         <div className="flex items-center space-x-3">
           <div className={`w-12 h-12 bg-gradient-to-br ${colorAvatar} rounded-lg flex items-center justify-center flex-shrink-0`}>
@@ -388,58 +455,34 @@ function FilaCurso({
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-800">{curso.nombre}</p>
-            <p className="text-xs text-slate-500">{curso.horas_totales}h · {curso.modalidad}</p>
+            <p className="text-xs text-slate-500">{curso.horas_totales}h</p>
           </div>
         </div>
       </td>
-
-      {/* Estado */}
       <td className="px-6 py-4">
         <EstadoBadge estado={curso.estado} />
       </td>
-
-      {/* Inscritos */}
       <td className="px-6 py-4">
         <p className="text-sm font-bold text-slate-800">{curso.total_inscritos ?? 0}</p>
-        <p className="text-xs text-slate-500">estudiantes</p>
       </td>
-
-      {/* Progreso promedio — no disponible en API actual */}
-      <td className="px-6 py-4">
-        <span className="text-sm text-slate-400">—</span>
-      </td>
-
-      {/* Popularidad — no disponible en API actual */}
-      <td className="px-6 py-4">
-        <div className="flex items-center space-x-1">
-          <Star size={14} className="text-amber-400 fill-amber-400" />
-          <span className="text-sm text-slate-400">—</span>
-        </div>
-      </td>
-
-      {/* Tasa de éxito — no disponible en API actual */}
-      <td className="px-6 py-4">
-        <span className="text-sm text-slate-400">—</span>
-      </td>
-
-      {/* Acciones */}
-      <td className="px-6 py-4">
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={onVer}
-            className="inline-flex items-center px-3 py-2 bg-blue-500 text-white text-xs font-semibold rounded-lg hover:bg-blue-600 transition"
+      <td className="px-6 py-4 text-right">
+        <div className="flex justify-end space-x-2">
+          <button 
+            onClick={onVer} 
+            className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
+            title="Ver detalles"
           >
-            <Eye size={13} className="mr-1" /> Ver
+            <Eye size={16} />
           </button>
-          <button
-            onClick={onEditar}
-            className="inline-flex items-center px-3 py-2 bg-amber-500 text-white text-xs font-semibold rounded-lg hover:bg-amber-600 transition"
+          <button 
+            onClick={onEditar} 
+            className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition"
+            title="Editar rápido"
           >
-            <Pencil size={13} className="mr-1" /> Editar
+            <Pencil size={16} />
           </button>
         </div>
       </td>
-
     </tr>
   );
 }
