@@ -15,6 +15,8 @@ import { LessonPage } from '@/pages/LessonPage';
 import { AdminCursosPage } from '@/pages/AdminCursosPage';
 import { CrearCursoWizard } from '@/pages/admin/wizard/CrearCursoWizard';
 
+
+
 function App() {
   return (
     <BrowserRouter>
@@ -75,6 +77,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+
 
           <Route
             path="/admin/cursos"

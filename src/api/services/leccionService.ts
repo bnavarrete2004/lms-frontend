@@ -42,7 +42,7 @@ export interface ActualizarLeccionPayload extends Partial<Omit<CrearLeccionPaylo
 
 class LeccionService extends BaseService<Leccion> {
   constructor() {
-    super({ endpoint: '/lecciones' });
+    super({ endpoint: '/lecciones/' });
   }
 
   async getByModulo(moduloId: number): Promise<Leccion[]> {

@@ -119,7 +119,6 @@ function WizardSidebar({
               <p className="text-sm font-semibold text-white truncate">{curso.nombre}</p>
               <p className="text-xs text-white/70">
                 {curso.horas_totales ? `${curso.horas_totales} horas` : 'Sin horas'}
-                {curso.modalidad ? ` · ${curso.modalidad}` : ''}
               </p>
               {curso.ciudad && (
                 <p className="text-xs text-white/60">{curso.ciudad}</p>

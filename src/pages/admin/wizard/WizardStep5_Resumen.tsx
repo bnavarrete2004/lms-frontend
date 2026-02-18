@@ -30,17 +30,7 @@ const TIPO_LABELS: Record<string, string> = {
   mixta:      'Mixta',
 };
 
-const MODALIDAD_LABELS: Record<string, string> = {
-  presencial: 'Presencial',
-  online:     'Online',
-  mixto:      'Mixto',
-};
 
-const NIVEL_LABELS: Record<string, string> = {
-  basico:     'Básico',
-  intermedio: 'Intermedio',
-  avanzado:   'Avanzado',
-};
 
 function Campo({ label, valor }: { label: string; valor: React.ReactNode }) {
   return (
@@ -145,14 +135,7 @@ export function WizardStep5_Resumen({
             label="Horas Totales"
             valor={curso.horas_totales ? `${curso.horas_totales} horas` : undefined}
           />
-          <Campo
-            label="Modalidad"
-            valor={curso.modalidad ? MODALIDAD_LABELS[curso.modalidad] : undefined}
-          />
-          <Campo
-            label="Nivel"
-            valor={curso.nivel ? NIVEL_LABELS[curso.nivel] : undefined}
-          />
+          
           <Campo label="Ciudad" valor={curso.ciudad} />
           <div className="col-span-2">
             <Campo label="Descripción" valor={

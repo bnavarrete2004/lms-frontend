@@ -37,7 +37,7 @@ export interface ActualizarModuloPayload extends Partial<Omit<CrearModuloPayload
 
 class ModuloService extends BaseService<Modulo> {
   constructor() {
-    super({ endpoint: '/modulos' });
+    super({ endpoint: '/modulos/' });
   }
 
   async getByCurso(cursoId: number): Promise<Modulo[]> {

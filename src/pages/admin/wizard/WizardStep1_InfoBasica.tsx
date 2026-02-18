@@ -1,14 +1,14 @@
 // src/pages/admin/wizard/WizardStep1_InfoBasica.tsx
 // Paso 1: Información básica del curso.
-// Maneja su propio estado de UI (preview imagen, errores de validación).
-// Los datos se sincronizan al hook useCursoWizard vía prop onChange.
+// Campos exactos del mockup: nombre, descripción, código SENCE, horas,
+// fecha inicio, fecha fin, relatores, ciudad, plantilla diploma (opcional),
+// imagen portada (opcional).
 
 import { useState, useRef, useEffect } from 'react';
 import { X, ImageIcon, ChevronRight } from 'lucide-react';
 import type { DatosCurso } from '@/hooks/useCursoWizard';
-import { type CodigoSence } from '@/api/services/cursoService';
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
+// ── Tipos locales ─────────────────────────────────────────────────────────────
 
 interface Props {
   datos: DatosCurso;
@@ -21,14 +21,31 @@ interface ErroresForm {
   nombre?: string;
   descripcion?: string;
   horas_totales?: string;
-  modalidad?: string;
-  nivel?: string;
-  ciudad?: string;
   fecha_inicio?: string;
   fecha_fin?: string;
+  relatores?: string;
+  ciudad?: string;
 }
 
-// ── Helper: clase base de inputs ──────────────────────────────────────────────
+interface PerfilRelator {
+  id: number;
+  usuario_data: {
+    id: number;
+    nombre_completo: string;
+    email: string;
+  };
+  especialidad: string;
+}
+
+interface CodigoSence {
+  id: number;
+  codigo: string;
+  nombre_curso: string;
+  horas_totales: number;
+  estado: string;
+}
+
+// ── Helper ────────────────────────────────────────────────────────────────────
 
 function inputCls(error?: string) {
   return `w-full px-4 py-3 border rounded-lg outline-none transition focus:ring-2
@@ -42,30 +59,49 @@ function inputCls(error?: string) {
 
 export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancelar }: Props) {
   const [errores, setErrores]           = useState<ErroresForm>({});
+  const [relatores, setRelatores]       = useState<PerfilRelator[]>([]);
   const [codigosSence, setCodigosSence] = useState<CodigoSence[]>([]);
-  const [loadingSence, setLoadingSence] = useState(false);
-  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [loadingRelatores, setLoadingRelatores] = useState(false);
+  const [loadingSence, setLoadingSence]         = useState(false);
+  const imageInputRef   = useRef<HTMLInputElement>(null);
 
-  // Cargar códigos SENCE disponibles
+  // ── Cargar relatores y códigos SENCE al montar ─────────────────────────────
+
   useEffect(() => {
-    async function cargar() {
+    console.log('🔄 WizardStep1 montado — cargando relatores');
+    async function cargarDatos() {
+      const token = localStorage.getItem('access_token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      // Perfiles relator
+      try {
+        setLoadingRelatores(true);
+        const res = await fetch('/api/perfiles-relator/', { headers });
+        const data = await res.json();
+        if (res.ok) {
+          setRelatores(Array.isArray(data) ? data : (data.results ?? []));
+        }
+        } catch (err) {
+          console.error('❌ Error relatores:', err);  // ← agrega esto
+        } finally {
+          setLoadingRelatores(false);
+        }
+
+      // Códigos SENCE
       try {
         setLoadingSence(true);
-        // CodigoSence está en el mismo cursoService
-        const res = await fetch('/api/codigos-sence/', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
-        });
+        const res = await fetch('/api/codigos-sence/', { headers });
         if (res.ok) {
           const data = await res.json();
-          setCodigosSence(Array.isArray(data) ? data : data.results ?? []);
+          setCodigosSence(Array.isArray(data) ? data : (data.results ?? []));
         }
       } catch {
-        // Si falla, el select queda vacío y el campo es opcional
+        // select quedará vacío — no es bloqueante
       } finally {
         setLoadingSence(false);
       }
     }
-    cargar();
+    cargarDatos();
   }, []);
 
   // ── Validación ──────────────────────────────────────────────────────────────
@@ -84,11 +120,16 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
     if (datos.horas_totales === '' || Number(datos.horas_totales) < 1)
       e.horas_totales = 'Las horas totales deben ser al menos 1.';
 
-    if (!datos.modalidad)
-      e.modalidad = 'Selecciona una modalidad.';
+    if (!datos.fecha_inicio)
+      e.fecha_inicio = 'La fecha de inicio es obligatoria.';
 
-    if (!datos.nivel)
-      e.nivel = 'Selecciona un nivel.';
+    if (!datos.fecha_fin)
+      e.fecha_fin = 'La fecha de fin es obligatoria.';
+    else if (datos.fecha_inicio && datos.fecha_fin <= datos.fecha_inicio)
+      e.fecha_fin = 'La fecha de fin debe ser posterior a la de inicio.';
+
+    if (datos.relatores.length === 0)
+      e.relatores = 'Debes asignar al menos un relator.';
 
     if (!datos.ciudad.trim())
       e.ciudad = 'La ciudad es obligatoria (aparece en el diploma).';
@@ -101,7 +142,14 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
     if (validar()) onSiguiente();
   }
 
-  // ── Manejo de imagen ────────────────────────────────────────────────────────
+  // ── Relatores: select múltiple ─────────────────────────────────────────────
+
+  function handleRelatores(e: React.ChangeEvent<HTMLSelectElement>) {
+    const seleccionados = Array.from(e.target.selectedOptions).map(o => Number(o.value));
+    onChange({ relatores: seleccionados });
+  }
+
+  // ── Imagen portada ─────────────────────────────────────────────────────────
 
   function handleImagen(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -116,13 +164,14 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
     if (imageInputRef.current) imageInputRef.current.value = '';
   }
 
+
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="max-w-4xl mx-auto">
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
 
-        {/* ── Nombre ────────────────────────────────────────────────────── */}
+        {/* Nombre */}
         <div className="mb-6">
           <label className="block text-sm font-semibold text-slate-700 mb-2">
             Nombre del Curso <span className="text-red-500">*</span>
@@ -140,7 +189,7 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
           }
         </div>
 
-        {/* ── Descripción ───────────────────────────────────────────────── */}
+        {/* Descripción */}
         <div className="mb-6">
           <label className="block text-sm font-semibold text-slate-700 mb-2">
             Descripción del Curso <span className="text-red-500">*</span>
@@ -157,7 +206,7 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
           )}
         </div>
 
-        {/* ── Código SENCE + Horas ──────────────────────────────────────── */}
+        {/* Código SENCE + Horas */}
         <div className="grid grid-cols-2 gap-6 mb-6">
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -177,7 +226,7 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
               ))}
             </select>
             <p className="text-xs text-slate-500 mt-1">
-              {loadingSence ? 'Cargando códigos...' : 'Solo si el curso tiene franquicia SENCE'}
+              {loadingSence ? 'Cargando códigos...' : 'Opcional - Solo si aplica'}
             </p>
           </div>
           <div>
@@ -199,47 +248,69 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
           </div>
         </div>
 
-        {/* ── Modalidad + Nivel ────────────────────────────────────────── */}
+        {/* Fecha Inicio + Fecha Fin */}
         <div className="grid grid-cols-2 gap-6 mb-6">
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Modalidad <span className="text-red-500">*</span>
+              Fecha Inicio (Default) <span className="text-red-500">*</span>
             </label>
-            <select
-              value={datos.modalidad}
-              onChange={e => onChange({ modalidad: e.target.value as DatosCurso['modalidad'] })}
-              className={inputCls(errores.modalidad)}
-            >
-              <option value="">Selecciona modalidad</option>
-              <option value="presencial">Presencial</option>
-              <option value="online">Online</option>
-              <option value="mixto">Mixto</option>
-            </select>
-            {errores.modalidad && (
-              <p className="text-xs text-red-500 mt-1">{errores.modalidad}</p>
-            )}
+            <input
+              type="date"
+              value={datos.fecha_inicio}
+              onChange={e => onChange({ fecha_inicio: e.target.value })}
+              className={inputCls(errores.fecha_inicio)}
+            />
+            {errores.fecha_inicio
+              ? <p className="text-xs text-red-500 mt-1">{errores.fecha_inicio}</p>
+              : <p className="text-xs text-slate-500 mt-1">Se puede personalizar por estudiante</p>
+            }
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Nivel <span className="text-red-500">*</span>
+              Fecha Fin (Default) <span className="text-red-500">*</span>
             </label>
-            <select
-              value={datos.nivel}
-              onChange={e => onChange({ nivel: e.target.value as DatosCurso['nivel'] })}
-              className={inputCls(errores.nivel)}
-            >
-              <option value="">Selecciona nivel</option>
-              <option value="basico">Básico</option>
-              <option value="intermedio">Intermedio</option>
-              <option value="avanzado">Avanzado</option>
-            </select>
-            {errores.nivel && (
-              <p className="text-xs text-red-500 mt-1">{errores.nivel}</p>
+            <input
+              type="date"
+              value={datos.fecha_fin}
+              onChange={e => onChange({ fecha_fin: e.target.value })}
+              className={inputCls(errores.fecha_fin)}
+            />
+            {errores.fecha_fin && (
+              <p className="text-xs text-red-500 mt-1">{errores.fecha_fin}</p>
             )}
           </div>
         </div>
 
-        {/* ── Ciudad ───────────────────────────────────────────────────── */}
+        {/* Relatores */}
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-slate-700 mb-2">
+            Relator(es) Asignados <span className="text-red-500">*</span>
+          </label>
+          <select
+            multiple
+            size={4}
+            value={datos.relatores.map(String)}
+            onChange={handleRelatores}
+            className={inputCls(errores.relatores)}
+            disabled={loadingRelatores}
+          >
+            {loadingRelatores
+              ? <option disabled>Cargando relatores...</option>
+              : relatores.map(r => (
+                  <option key={r.id} value={r.id}>
+                    {r.usuario_data?.nombre_completo ?? `Relator #${r.id}`}
+                    {r.especialidad ? ` — ${r.especialidad}` : ''}
+                  </option>
+                ))
+            }
+          </select>
+          {errores.relatores
+            ? <p className="text-xs text-red-500 mt-1">{errores.relatores}</p>
+            : <p className="text-xs text-slate-500 mt-1">Mantén presionado Ctrl/Cmd para seleccionar múltiples relatores</p>
+          }
+        </div>
+
+        {/* Ciudad */}
         <div className="mb-6">
           <label className="block text-sm font-semibold text-slate-700 mb-2">
             Ciudad <span className="text-red-500">*</span>
@@ -253,18 +324,18 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
           />
           {errores.ciudad
             ? <p className="text-xs text-red-500 mt-1">{errores.ciudad}</p>
-            : <p className="text-xs text-slate-500 mt-1">Ciudad donde se realiza la capacitación (aparecerá en el diploma)</p>
+            : <p className="text-xs text-slate-500 mt-1">Ciudad donde se realiza la capacitación (aparecerá en diploma)</p>
           }
         </div>
 
-        {/* ── Imagen de Portada (opcional) ──────────────────────────────── */}
+        
+
+        {/* Imagen Portada (opcional) */}
         <div className="mb-6">
           <label className="block text-sm font-semibold text-slate-700 mb-2">
             Imagen de Portada <span className="text-slate-400 font-normal">(opcional)</span>
           </label>
-
           {datos.imagen_url ? (
-            /* Preview de imagen seleccionada */
             <div className="relative">
               <img
                 src={datos.imagen_url}
@@ -272,7 +343,6 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
                 className="w-full h-48 object-cover rounded-lg border border-slate-200"
               />
               <button
-                type="button"
                 onClick={quitarImagen}
                 className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition shadow"
               >
@@ -280,7 +350,6 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
               </button>
             </div>
           ) : (
-            /* Zona de upload */
             <div
               onClick={() => imageInputRef.current?.click()}
               className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-jc-calipso transition cursor-pointer group"
@@ -290,7 +359,6 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
               <p className="text-xs text-slate-400 mt-1">PNG o JPG · Recomendado: 1200×600px · Máx. 5MB</p>
             </div>
           )}
-
           <input
             ref={imageInputRef}
             type="file"
@@ -300,17 +368,15 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
           />
         </div>
 
-        {/* ── Botones de navegación ────────────────────────────────────── */}
+        {/* Botones */}
         <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-100">
           <button
-            type="button"
             onClick={onCancelar}
             className="px-6 py-3 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition"
           >
             Cancelar
           </button>
           <button
-            type="button"
             onClick={handleSiguiente}
             className="inline-flex items-center px-8 py-3 bg-jc-blue text-white rounded-lg font-semibold hover:bg-jc-blue-dark transition shadow-sm"
           >

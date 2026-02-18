@@ -46,7 +46,7 @@ export interface Curso {
 
 class CursoService extends BaseService<Curso> {
   constructor() {
-    super({ endpoint: '/cursos' });
+    super({ endpoint: '/cursos/' });
   }
 
   async getActivos() {

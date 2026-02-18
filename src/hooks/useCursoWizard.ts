@@ -18,16 +18,14 @@ export type PasoWizard = 1 | 2 | 3 | 4 | 5;
 export interface DatosCurso {
   nombre: string;
   descripcion: string;
-  codigo_sence: number | null;       // null = sin código SENCE
+  codigo_sence: number | null;
   horas_totales: number | '';
-  modalidad: 'presencial' | 'online' | 'mixto' | '';
-  nivel: 'basico' | 'intermedio' | 'avanzado' | '';
   ciudad: string;
-  fecha_inicio: string;              // ISO date string 'YYYY-MM-DD'
-  fecha_fin: string;                 // ISO date string 'YYYY-MM-DD'
-  relatores: number[];               // IDs de usuarios con rol relator
-  imagen_portada: File | null;       // solo en memoria, se sube al publicar
-  imagen_url?: string;               // preview local (URL.createObjectURL)
+  fecha_inicio: string;
+  fecha_fin: string;
+  relatores: number[];
+  imagen_portada: File | null;
+  imagen_url?: string;
 }
 
 // Paso 2 — Módulos (en memoria, sin ID de backend aún)
@@ -73,8 +71,6 @@ const CURSO_INICIAL: DatosCurso = {
   descripcion: '',
   codigo_sence: null,
   horas_totales: '',
-  modalidad: '',
-  nivel: '',
   ciudad: '',
   fecha_inicio: '',
   fecha_fin: '',
@@ -273,10 +269,13 @@ export function useCursoWizard() {
         nombre: curso.nombre,
         descripcion: curso.descripcion,
         horas_totales: Number(curso.horas_totales),
-        modalidad: curso.modalidad,
-        nivel: curso.nivel,
         estado: 'activo',
+        codigo_sence_curso: curso.codigo_sence
+          ? `SENCE-${curso.codigo_sence}`
+          : `CURSO-${Date.now()}`,
         ...(curso.codigo_sence ? { codigo_sence: curso.codigo_sence } : {}),
+        ...(curso.fecha_inicio ? { fecha_inicio: curso.fecha_inicio } : {}),
+        ...(curso.fecha_fin    ? { fecha_fin: curso.fecha_fin }       : {}),
       };
 
       // Nota: imagen_portada se subiría por separado con FormData si el backend lo requiere.
