@@ -135,12 +135,12 @@ export function DashboardPage() {
   return (
     <MainLayout
       role="estudiante"
-      userName={user?.nombre && user?.apellido ? `${user.nombre} ${user.apellido}` : user?.username || 'Usuario'}
+      userName={user?.nombre_completo || user?.username || 'Usuario'}
       userSubtitle={user?.rut || 'Estudiante'}
       sidebarSections={sidebarSections}
       onLogout={handleLogout}
       headerTitle="Dashboard General"
-      headerSubtitle={`Bienvenido de vuelta, ${user?.nombre || user?.username}`}
+      headerSubtitle={`Bienvenido de vuelta,${user?.nombre_completo || user?.username || 'Usuario'}`}
       sessionTime="1h 23min"
       notificationCount={2}
     >

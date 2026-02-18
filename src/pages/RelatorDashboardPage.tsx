@@ -91,7 +91,7 @@ export function RelatorDashboardPage() {
   return (
     <MainLayout
       role="relator"
-      userName={user?.nombre || 'Relator'}
+      userName={user?.nombre_completo || user?.username || 'Relator'}
       sidebarSections={sidebarSections}
       onLogout={handleLogout}
       headerTitle="Panel de Control Docente"
@@ -112,7 +112,7 @@ export function RelatorDashboardPage() {
                 Estado del Periodo: Activo
               </Badge>
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
-                ¡Hola, {user?.nombre}!
+                ¡Hola, {user?.nombre_completo || user?.username || 'Relator'}!
               </h2>
               <p className="text-slate-300 max-w-md mb-6">
                 Tienes 8 materiales pendientes de revisión y 3 cursos activos esta semana.
