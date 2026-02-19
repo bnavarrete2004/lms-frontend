@@ -18,6 +18,8 @@ import { AdminCursoDetailPage } from '@/pages/admin/AdminCursoDetailPage';
 import { AdminCursoEditPage } from '@/pages/admin/AdminCursoEditPage';
 import { AdminUsuariosPage } from '@/pages/AdminUsuariosPage';
 import { AdminLandingPage } from '@/pages/AdminLandingPage';
+import { AdminConfigPage } from '@/pages/AdminConfigPage';
+import { AdminReportesSencePage } from '@/pages/AdminReportesSencePage';
 
 
 function App() {
@@ -131,6 +133,24 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['administrador']}>
                   <AdminLandingPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/config"
+              element={
+                <ProtectedRoute allowedRoles={['administrador']}>
+                  <AdminConfigPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/reportes"
+              element={
+                <ProtectedRoute allowedRoles={['administrador']}>
+                  <AdminReportesSencePage />
                 </ProtectedRoute>
               }
             />
