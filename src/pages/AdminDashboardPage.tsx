@@ -146,9 +146,9 @@ export function AdminDashboardPage() {
           diplomasRes.data?.count ?? diplomasRes.data?.results?.length ?? diplomasRes.data?.length ?? 0;
 
         const materialesPendientes =
-          materialesPendientesRes.data?.count ??
-          materialesPendientesRes.data?.results?.length ??
-          materialesPendientesRes.data?.length ?? 0;
+          materialesRes.data?.count ??
+          materialesRes.data?.results?.length ??
+          materialesRes.data?.length ?? 0;
 
         setStats({
           cursosActivos,

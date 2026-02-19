@@ -8,6 +8,8 @@ interface CoursePreviewCardProps {
   duration: string;
   rating: number;
   gradient: string;
+  imageUrl?: string;       // si existe, reemplaza el gradiente
+  onVerMas?: () => void;
 }
 
 export function CoursePreviewCard({
@@ -16,15 +18,21 @@ export function CoursePreviewCard({
   duration,
   rating,
   gradient,
+  imageUrl,
+  onVerMas,
 }: CoursePreviewCardProps) {
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
-      {/* Gradient Header */}
-      <div className={`h-48 ${gradient}`} />
+      {/* Header — imagen o gradiente */}
+      <div className={`h-48 ${!imageUrl ? gradient : ''} overflow-hidden`}>
+        {imageUrl
+          ? <img src={imageUrl} alt={title} className="w-full h-full object-cover" />
+          : null
+        }
+      </div>
 
       {/* Content */}
       <div className="p-6">
-        {/* Meta Info */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-1 text-sm text-gray-600 bg-blue-50 px-3 py-1 rounded-full">
             <Clock size={14} />
@@ -35,17 +43,12 @@ export function CoursePreviewCard({
             <span className="text-sm font-semibold">{rating}</span>
           </div>
         </div>
-
-        {/* Title */}
         <h3 className="text-xl font-bold text-gray-900 mb-2">{title}</h3>
-
-        {/* Description */}
         <p className="text-gray-600 mb-4 line-clamp-3">{description}</p>
-
-        {/* CTA */}
         <Button
           variant="outline"
           className="w-full border-jc-blue text-jc-blue hover:bg-jc-blue hover:text-white"
+          onClick={onVerMas}
         >
           Ver Más
         </Button>

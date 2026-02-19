@@ -1,7 +1,7 @@
 // src/hooks/useLandingContent.ts
 import { useState, useEffect } from 'react';
 
-// ── Tipos del contenido editable ──────────────────────────────────────────────
+// ── Tipos ─────────────────────────────────────────────────────────────────────
 
 export interface HeroContent {
   titulo: string;
@@ -44,9 +44,15 @@ export interface TestimonioContent {
   texto: string;
 }
 
+export interface LogoCliente {
+  nombre: string;   // nombre de la empresa (para alt text)
+  imageUrl: string; // base64 o URL
+}
+
 export interface ClientesContent {
   titulo: string;
   descripcion: string;
+  logos: [LogoCliente, LogoCliente, LogoCliente, LogoCliente];
   testimonio1: TestimonioContent;
   testimonio2: TestimonioContent;
 }
@@ -55,6 +61,7 @@ export interface NoticiaContent {
   fecha: string;
   titulo: string;
   resumen: string;
+  imageUrl: string; // base64 o URL — vacío = usa gradiente
 }
 
 export interface NoticiasContent {
@@ -73,11 +80,23 @@ export interface FooterContent {
   copyright: string;
 }
 
-export interface CursosDestacadosContent {
+export interface CursoDestacado {
+  // Si viene de API: solo se guarda el id
+  // Si es manual: se guarda título, descripción, duración e imagen
+  tipo: 'api' | 'manual';
+  api_id?: number;
   titulo: string;
   descripcion: string;
-  // IDs de cursos de la API que se quieren destacar (máx 3)
-  cursos_destacados_ids: number[];
+  duracion: string;
+  rating: number;
+  imageUrl: string; // base64 o URL — vacío = usa gradiente
+  gradient: string;
+}
+
+export interface CursosContent {
+  titulo: string;
+  descripcion: string;
+  destacados: [CursoDestacado, CursoDestacado, CursoDestacado];
 }
 
 export interface LandingContent {
@@ -87,10 +106,12 @@ export interface LandingContent {
   clientes: ClientesContent;
   noticias: NoticiasContent;
   footer: FooterContent;
-  cursos: CursosDestacadosContent;
+  cursos: CursosContent;
 }
 
-// ── Contenido por defecto ─────────────────────────────────────────────────────
+// ── Defaults ──────────────────────────────────────────────────────────────────
+
+const logoVacio: LogoCliente = { nombre: '', imageUrl: '' };
 
 export const LANDING_DEFAULTS: LandingContent = {
   hero: {
@@ -128,47 +149,45 @@ export const LANDING_DEFAULTS: LandingContent = {
   clientes: {
     titulo: 'Nuestros Clientes',
     descripcion: 'Empresas que confían en nuestra plataforma para la capacitación de sus equipos.',
+    logos: [
+      { ...logoVacio },
+      { ...logoVacio },
+      { ...logoVacio },
+      { ...logoVacio },
+    ],
     testimonio1: {
       nombre: 'María González',
       cargo: 'Gerente de RRHH - Empresa ABC',
-      texto: 'La plataforma es muy intuitiva y nuestros colaboradores han podido capacitarse sin problemas. El seguimiento en tiempo real nos permite ver el progreso de cada uno.',
+      texto: 'La plataforma es muy intuitiva y nuestros colaboradores han podido capacitarse sin problemas.',
     },
     testimonio2: {
       nombre: 'Carlos Rodríguez',
       cargo: 'Director General - Empresa XYZ',
-      texto: 'Los cursos están muy bien estructurados y el material es de excelente calidad. La certificación SENCE fue un plus importante para nuestra empresa.',
+      texto: 'Los cursos están muy bien estructurados y el material es de excelente calidad.',
     },
   },
   noticias: {
     titulo: 'Últimas Noticias',
     descripcion: 'Mantente informado sobre novedades, nuevos cursos y actualizaciones.',
-    noticia1: {
-      fecha: '05 Enero 2026',
-      titulo: 'Nuevos cursos de Transformación Digital',
-      resumen: 'Lanzamos una nueva línea de cursos enfocados en la transformación digital de las empresas.',
-    },
-    noticia2: {
-      fecha: '28 Diciembre 2025',
-      titulo: 'Certificación SENCE renovada para 2026',
-      resumen: 'Hemos renovado nuestra certificación SENCE, garantizando la calidad de nuestros programas.',
-    },
-    noticia3: {
-      fecha: '15 Diciembre 2025',
-      titulo: 'Tips para Capacitación Online Efectiva',
-      resumen: 'Descubre cómo sacar el máximo provecho a nuestra plataforma asincrónica con estos consejos.',
-    },
+    noticia1: { fecha: '05 Enero 2026', titulo: 'Nuevos cursos de Transformación Digital', resumen: 'Lanzamos una nueva línea de cursos enfocados en la transformación digital de las empresas.', imageUrl: '' },
+    noticia2: { fecha: '28 Diciembre 2025', titulo: 'Certificación SENCE renovada para 2026', resumen: 'Hemos renovado nuestra certificación SENCE, garantizando la calidad de nuestros programas.', imageUrl: '' },
+    noticia3: { fecha: '15 Diciembre 2025', titulo: 'Tips para Capacitación Online Efectiva', resumen: 'Descubre cómo sacar el máximo provecho a nuestra plataforma asincrónica con estos consejos.', imageUrl: '' },
   },
   footer: {
-    nombre_empresa: 'JC Digital Training',
+    nombre_empresa: 'J&C Digital Training',
     eslogan: 'Potenciando el talento humano a través de la educación digital.',
-    email: 'contacto@jcdigital.cl',
+    email: 'contacto@jcdigitaltraining.cl',
     telefono: '+56 9 1234 5678',
-    copyright: '© 2026 JC Digital Training. Todos los derechos reservados.',
+    copyright: '© 2026 J&C Digital Training. Todos los derechos reservados.',
   },
   cursos: {
     titulo: 'Nuestros Cursos',
     descripcion: 'Explora nuestra amplia variedad de cursos diseñados para potenciar las habilidades de tu equipo.',
-    cursos_destacados_ids: [],
+    destacados: [
+      { tipo: 'manual', titulo: 'Liderazgo y Gestión de Equipos', descripcion: 'Desarrolla habilidades de liderazgo efectivo para gestionar equipos de alto rendimiento.', duracion: '40 horas', rating: 4.8, imageUrl: '', gradient: 'bg-gradient-to-br from-jc-blue-dark to-jc-blue' },
+      { tipo: 'manual', titulo: 'Excel Avanzado para Negocios', descripcion: 'Domina herramientas avanzadas de Excel para análisis de datos y toma de decisiones.', duracion: '30 horas', rating: 4.9, imageUrl: '', gradient: 'bg-gradient-to-br from-jc-calipso to-jc-blue' },
+      { tipo: 'manual', titulo: 'Marketing Digital Estratégico', descripcion: 'Aprende estrategias de marketing digital para impulsar tu negocio en el entorno online.', duracion: '50 horas', rating: 4.7, imageUrl: '', gradient: 'bg-gradient-to-br from-jc-blue-dark to-jc-calipso' },
+    ],
   },
 };
 
@@ -181,38 +200,28 @@ export function useLandingContent() {
   const [isDraft, setIsDraft] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
-  // Cargar desde localStorage al montar
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Merge con defaults para que campos nuevos no rompan
-        setContent(prev => deepMerge(prev, parsed.content ?? parsed));
+        setContent(deepMerge(LANDING_DEFAULTS, parsed.content ?? parsed));
         if (parsed.lastSaved) setLastSaved(new Date(parsed.lastSaved));
       }
-    } catch {
-      // Si falla el parse, usa defaults silenciosamente
-    }
+    } catch { /* usa defaults */ }
   }, []);
 
   const updateSection = <K extends keyof LandingContent>(
     section: K,
     data: Partial<LandingContent[K]>
   ) => {
-    setContent(prev => ({
-      ...prev,
-      [section]: { ...prev[section], ...data },
-    }));
+    setContent(prev => ({ ...prev, [section]: { ...prev[section], ...data } }));
     setIsDraft(true);
   };
 
   const saveContent = () => {
     const now = new Date();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      content,
-      lastSaved: now.toISOString(),
-    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ content, lastSaved: now.toISOString() }));
     setLastSaved(now);
     setIsDraft(false);
   };
@@ -226,29 +235,16 @@ export function useLandingContent() {
       } else {
         setContent(LANDING_DEFAULTS);
       }
-    } catch {
-      setContent(LANDING_DEFAULTS);
-    }
+    } catch { setContent(LANDING_DEFAULTS); }
     setIsDraft(false);
   };
 
-  const resetToDefaults = () => {
-    setContent(LANDING_DEFAULTS);
-    setIsDraft(true);
-  };
+  const resetToDefaults = () => { setContent(LANDING_DEFAULTS); setIsDraft(true); };
 
-  return {
-    content,
-    isDraft,
-    lastSaved,
-    updateSection,
-    saveContent,
-    discardChanges,
-    resetToDefaults,
-  };
+  return { content, isDraft, lastSaved, updateSection, saveContent, discardChanges, resetToDefaults };
 }
 
-// ── Helper deep merge ─────────────────────────────────────────────────────────
+// ── Deep merge ────────────────────────────────────────────────────────────────
 
 function deepMerge<T extends object>(target: T, source: Partial<T>): T {
   const result = { ...target };

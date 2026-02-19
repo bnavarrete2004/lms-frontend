@@ -7,25 +7,23 @@ import { CoursesSection } from '@/components/landing/CoursesSection';
 import { MethodologySection } from '@/components/landing/MethodologySection';
 import { ClientsSection } from '@/components/landing/ClientsSection';
 import { NewsSection } from '@/components/landing/NewsSection';
+import { useLandingContent } from '@/hooks/useLandingContent';
 
 export function LandingPage() {
+  const { content } = useLandingContent();
+
   return (
     <div className="min-h-screen bg-white">
-      {/* Navigation */}
       <LandingNavbar />
-
-      {/* Main Content */}
       <main>
-        <HeroSection />
-        <AboutSection />
-        <CoursesSection />
-        <MethodologySection />
-        <ClientsSection />
-        <NewsSection />
+        <HeroSection content={content.hero} />
+        <AboutSection content={content.nosotros} />
+        <CoursesSection content={content.cursos} />
+        <MethodologySection content={content.metodologia} />
+        <ClientsSection content={content.clientes} />
+        <NewsSection content={content.noticias} />
       </main>
-
-      {/* Footer */}
-      <LandingFooter />
+      <LandingFooter content={content.footer} />
     </div>
   );
 }

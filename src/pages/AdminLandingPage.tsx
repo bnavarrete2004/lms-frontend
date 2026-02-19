@@ -1,116 +1,319 @@
 // src/pages/AdminLandingPage.tsx
-// Vista de edición del landing page para administradores.
-// Renderiza el mismo landing con un banner de edición y botones de lápiz
-// superpuestos en cada sección. Los cambios se guardan en localStorage.
-
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Pencil, X, Save, Eye, RotateCcw, CheckCircle, Clock, Users,
-  ArrowLeft, AlertTriangle,
+  Pencil, X, Save, Eye, RotateCcw, ArrowLeft, AlertTriangle,
+  Upload, Image as ImageIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import { LandingFooter } from '@/components/landing/LandingFooter';
+import { HeroSection } from '@/components/landing/HeroSection';
+import { AboutSection } from '@/components/landing/AboutSection';
+import { CoursesSection } from '@/components/landing/CoursesSection';
+import { MethodologySection } from '@/components/landing/MethodologySection';
+import { ClientsSection } from '@/components/landing/ClientsSection';
+import { NewsSection } from '@/components/landing/NewsSection';
 import { useLandingContent } from '@/hooks/useLandingContent';
-import type { LandingContent } from '@/hooks/useLandingContent';
+import type { CursoDestacado, LogoCliente, NoticiaContent } from '@/hooks/useLandingContent';
+import { Logo } from '@/components/ui/Logo';
 
-// ── Wrapper de sección editable ───────────────────────────────────────────────
+const BANNER_H = 56;
 
-function EditableSection({
-  children,
-  label,
-  onEdit,
-}: {
-  children: React.ReactNode;
-  label: string;
-  onEdit: () => void;
+// ── Navbar de edición (repinado bajo el banner) ───────────────────────────────
+function EditNavbar() {
+  return (
+    <nav className="fixed w-full z-50 bg-white/95 backdrop-blur-md shadow-sm" style={{ top: BANNER_H }}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
+        <div className="flex items-center space-x-3">
+          <Logo variant="color" size="md" />
+          <div>
+            <div className="text-lg font-bold text-jc-blue">J&C Digital Training</div>
+            <div className="text-xs text-gray-600 hidden sm:block">Capacitaciones</div>
+          </div>
+        </div>
+        <div className="hidden lg:flex items-center space-x-6 text-sm text-gray-400">
+          {['Inicio', 'Quiénes Somos', 'Cursos', 'Metodología', 'Clientes', 'Noticias', 'Contacto'].map(l => (
+            <span key={l}>{l}</span>
+          ))}
+        </div>
+        <span className="hidden lg:block px-4 py-2 rounded-lg bg-gradient-to-r from-jc-calipso to-jc-cyan text-white text-sm font-semibold opacity-50 cursor-default">
+          Iniciar Sesión
+        </span>
+      </div>
+    </nav>
+  );
+}
+
+// ── Wrapper editable ──────────────────────────────────────────────────────────
+function EditableSection({ children, label, onEdit, vistaPrevia }: {
+  children: React.ReactNode; label: string; onEdit: () => void; vistaPrevia: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
+  if (vistaPrevia) return <>{children}</>;
   return (
-    <div
-      className="relative"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
+    <div className="relative" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       {children}
-      {/* Overlay al hover */}
-      <div className={`absolute inset-0 border-2 border-dashed border-jc-calipso rounded-lg pointer-events-none transition-opacity duration-200 ${hovered ? 'opacity-100' : 'opacity-0'}`} />
-      {/* Botón lápiz */}
-      <button
-        onClick={onEdit}
-        className={`absolute top-4 right-4 z-20 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:bg-jc-calipso hover:text-white group ${hovered ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
-        title={`Editar: ${label}`}
-      >
-        <Pencil size={16} className="text-slate-600 group-hover:text-white" />
-      </button>
+      {hovered && (
+        <>
+          <div className="absolute inset-0 border-2 border-amber-400/60 pointer-events-none z-30" />
+          <button
+            onClick={onEdit}
+            className="absolute top-4 right-4 z-40 bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-2 px-4 py-2 rounded-full shadow-lg transition-all text-xs font-bold uppercase tracking-wider"
+          >
+            <Pencil size={13} /> Editar {label}
+          </button>
+        </>
+      )}
     </div>
   );
 }
 
-// ── Modal genérico de edición ─────────────────────────────────────────────────
+// ── Modal texto genérico ──────────────────────────────────────────────────────
+interface FieldDef { key: string; label: string; type?: 'text' | 'textarea'; }
 
-interface FieldDef {
-  key: string;
-  label: string;
-  multiline?: boolean;
-}
-
-function EditModal({
-  titulo,
-  fields,
-  values,
-  onClose,
-  onSave,
-}: {
-  titulo: string;
-  fields: FieldDef[];
-  values: Record<string, string>;
-  onClose: () => void;
-  onSave: (data: Record<string, string>) => void;
+function EditModal({ titulo, fields, values, onClose, onSave }: {
+  titulo: string; fields: FieldDef[]; values: Record<string, string>;
+  onClose: () => void; onSave: (d: Record<string, string>) => void;
 }) {
   const [form, setForm] = useState<Record<string, string>>(values);
-
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-amber-50">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2">
-            <Pencil size={18} className="text-amber-500" />
-            Editar: {titulo}
-          </h3>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="px-6 py-4 border-b flex justify-between items-center bg-amber-50">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2"><Pencil size={16} className="text-amber-500" /> Editar: {titulo}</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
-
-        {/* Campos */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {fields.map(f => (
             <div key={f.key}>
-              <label className="block text-sm font-medium text-slate-700 mb-1">{f.label}</label>
-              {f.multiline ? (
-                <textarea
-                  rows={3}
-                  className="w-full border border-slate-300 rounded-lg p-3 resize-none outline-none focus:ring-2 focus:ring-amber-400/40 text-sm"
-                  value={form[f.key] ?? ''}
-                  onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                />
-              ) : (
-                <input
-                  type="text"
-                  className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-amber-400/40 text-sm"
-                  value={form[f.key] ?? ''}
-                  onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                />
-              )}
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{f.label}</label>
+              {f.type === 'textarea'
+                ? <textarea rows={3} className="w-full border rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-amber-400/30 resize-none" value={form[f.key] ?? ''} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} />
+                : <input type="text" className="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-amber-400/30" value={form[f.key] ?? ''} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} />
+              }
             </div>
           ))}
         </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 bg-slate-50 border-t flex justify-end gap-3">
+        <div className="px-6 py-4 border-t bg-slate-50 flex justify-end gap-3">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => onSave(form)} className="bg-amber-500 hover:bg-amber-600 text-white">
-            <Save size={15} className="mr-2" /> Aplicar
+          <Button onClick={() => onSave(form)} className="bg-amber-500 hover:bg-amber-600 text-white"><Save size={14} className="mr-2" /> Aplicar</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Helper: leer archivo como base64 ─────────────────────────────────────────
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result as string);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+// ── Input de imagen reutilizable ──────────────────────────────────────────────
+function ImageUploader({ label, value, onChange }: {
+  label: string; value: string; onChange: (base64: string) => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const b64 = await fileToBase64(file);
+    onChange(b64);
+  };
+  return (
+    <div>
+      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</label>
+      <div
+        className="border-2 border-dashed border-slate-300 rounded-lg p-4 flex flex-col items-center gap-2 cursor-pointer hover:border-amber-400 transition-colors"
+        onClick={() => ref.current?.click()}
+      >
+        {value
+          ? <img src={value} alt="preview" className="max-h-28 object-contain rounded" />
+          : <><ImageIcon size={32} className="text-slate-300" /><p className="text-xs text-slate-400">Haz click para subir imagen</p></>
+        }
+        {value && <p className="text-[10px] text-slate-400">Haz click para cambiar</p>}
+      </div>
+      <input ref={ref} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+    </div>
+  );
+}
+
+// ── Modal cursos destacados ───────────────────────────────────────────────────
+function ModalCursos({ destacados, onClose, onSave }: {
+  destacados: [CursoDestacado, CursoDestacado, CursoDestacado];
+  onClose: () => void;
+  onSave: (d: [CursoDestacado, CursoDestacado, CursoDestacado]) => void;
+}) {
+  const [form, setForm] = useState<[CursoDestacado, CursoDestacado, CursoDestacado]>(
+    JSON.parse(JSON.stringify(destacados))
+  );
+  const update = (i: number, field: keyof CursoDestacado, value: string | number) => {
+    const copy = [...form] as typeof form;
+    (copy[i] as any)[field] = value;
+    setForm(copy);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="px-6 py-4 border-b flex justify-between items-center bg-amber-50">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2"><Pencil size={16} className="text-amber-500" /> Editar Cursos Destacados</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+          {form.map((curso, i) => (
+            <div key={i} className="border rounded-xl p-5 space-y-4">
+              <h4 className="font-bold text-slate-700">Curso {i + 1}</h4>
+              <ImageUploader
+                label="Imagen de portada (reemplaza gradiente)"
+                value={curso.imageUrl}
+                onChange={v => update(i, 'imageUrl', v)}
+              />
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Título</label>
+                <input type="text" className="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-amber-400/30" value={curso.titulo} onChange={e => update(i, 'titulo', e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Descripción</label>
+                <textarea rows={2} className="w-full border rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-amber-400/30 resize-none" value={curso.descripcion} onChange={e => update(i, 'descripcion', e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Duración</label>
+                  <input type="text" className="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-amber-400/30" value={curso.duracion} onChange={e => update(i, 'duracion', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Rating (1-5)</label>
+                  <input type="number" min={1} max={5} step={0.1} className="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-amber-400/30" value={curso.rating} onChange={e => update(i, 'rating', parseFloat(e.target.value))} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="px-6 py-4 border-t bg-slate-50 flex justify-end gap-3">
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button onClick={() => onSave(form)} className="bg-amber-500 hover:bg-amber-600 text-white"><Save size={14} className="mr-2" /> Aplicar</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Modal logos de clientes ───────────────────────────────────────────────────
+function ModalLogos({ logos, onClose, onSave }: {
+  logos: [LogoCliente, LogoCliente, LogoCliente, LogoCliente];
+  onClose: () => void;
+  onSave: (d: [LogoCliente, LogoCliente, LogoCliente, LogoCliente]) => void;
+}) {
+  const [form, setForm] = useState<[LogoCliente, LogoCliente, LogoCliente, LogoCliente]>(
+    JSON.parse(JSON.stringify(logos))
+  );
+  const update = (i: number, field: keyof LogoCliente, value: string) => {
+    const copy = [...form] as typeof form;
+    copy[i] = { ...copy[i], [field]: value };
+    setForm(copy);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="px-6 py-4 border-b flex justify-between items-center bg-amber-50">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2"><ImageIcon size={16} className="text-amber-500" /> Logos de Clientes</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {form.map((logo, i) => (
+            <div key={i} className="border rounded-xl p-4 space-y-3">
+              <h4 className="font-bold text-slate-600 text-sm">Logo {i + 1}</h4>
+              <ImageUploader
+                label="Imagen del logo"
+                value={logo.imageUrl}
+                onChange={v => update(i, 'imageUrl', v)}
+              />
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nombre empresa (alt text)</label>
+                <input type="text" className="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-amber-400/30" value={logo.nombre} onChange={e => update(i, 'nombre', e.target.value)} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="px-6 py-4 border-t bg-slate-50 flex justify-end gap-3">
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button onClick={() => onSave(form)} className="bg-amber-500 hover:bg-amber-600 text-white"><Save size={14} className="mr-2" /> Aplicar</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Modal noticias con imagen ─────────────────────────────────────────────────
+function ModalNoticias({ noticias, titulo, descripcion, onClose, onSave }: {
+  noticias: [NoticiaContent, NoticiaContent, NoticiaContent];
+  titulo: string; descripcion: string;
+  onClose: () => void;
+  onSave: (d: { titulo: string; descripcion: string; noticias: [NoticiaContent, NoticiaContent, NoticiaContent] }) => void;
+}) {
+  const [tit, setTit] = useState(titulo);
+  const [desc, setDesc] = useState(descripcion);
+  const [form, setForm] = useState<[NoticiaContent, NoticiaContent, NoticiaContent]>(
+    JSON.parse(JSON.stringify(noticias))
+  );
+  const update = (i: number, field: keyof NoticiaContent, value: string) => {
+    const copy = [...form] as typeof form;
+    copy[i] = { ...copy[i], [field]: value };
+    setForm(copy);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="px-6 py-4 border-b flex justify-between items-center bg-amber-50">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2"><Pencil size={16} className="text-amber-500" /> Editar Noticias</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Encabezado sección */}
+          <div className="border rounded-xl p-4 space-y-3 bg-slate-50">
+            <h4 className="font-bold text-slate-600 text-sm">Encabezado de sección</h4>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Título</label>
+              <input type="text" className="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-amber-400/30" value={tit} onChange={e => setTit(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Descripción</label>
+              <textarea rows={2} className="w-full border rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-amber-400/30 resize-none" value={desc} onChange={e => setDesc(e.target.value)} />
+            </div>
+          </div>
+          {/* Noticias */}
+          {form.map((n, i) => (
+            <div key={i} className="border rounded-xl p-5 space-y-4">
+              <h4 className="font-bold text-slate-700">Noticia {i + 1}</h4>
+              <ImageUploader label="Imagen de portada" value={n.imageUrl} onChange={v => update(i, 'imageUrl', v)} />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fecha</label>
+                  <input type="text" className="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-amber-400/30" value={n.fecha} onChange={e => update(i, 'fecha', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Título</label>
+                  <input type="text" className="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-amber-400/30" value={n.titulo} onChange={e => update(i, 'titulo', e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Resumen</label>
+                <textarea rows={2} className="w-full border rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-amber-400/30 resize-none" value={n.resumen} onChange={e => update(i, 'resumen', e.target.value)} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="px-6 py-4 border-t bg-slate-50 flex justify-end gap-3">
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button onClick={() => onSave({ titulo: tit, descripcion: desc, noticias: form })} className="bg-amber-500 hover:bg-amber-600 text-white">
+            <Save size={14} className="mr-2" /> Aplicar
           </Button>
         </div>
       </div>
@@ -118,472 +321,200 @@ function EditModal({
   );
 }
 
-// ── Tipos de modal activo ─────────────────────────────────────────────────────
-
-type ModalType =
-  | 'hero' | 'nosotros' | 'mision' | 'vision' | 'valores'
-  | 'metodologia' | 'paso1' | 'paso2' | 'paso3' | 'paso4'
-  | 'clientes' | 'testimonio1' | 'testimonio2'
-  | 'noticias' | 'noticia1' | 'noticia2' | 'noticia3'
-  | 'footer' | null;
-
-// ── Componente principal ──────────────────────────────────────────────────────
+// ── Página principal ──────────────────────────────────────────────────────────
+type ModalType = 'hero' | 'nosotros' | 'metodologia' | 'clientes_texto' | 'clientes_logos' | 'noticias' | 'footer' | 'cursos' | null;
 
 export function AdminLandingPage() {
   const navigate = useNavigate();
   const { content, isDraft, lastSaved, updateSection, saveContent, discardChanges } = useLandingContent();
-  const [modalActivo, setModalActivo] = useState<ModalType>(null);
+  const [modal, setModal] = useState<ModalType>(null);
   const [vistaPrevia, setVistaPrevia] = useState(false);
 
-  const handleSave = () => {
-    saveContent();
-  };
-
-  const handleDiscard = () => {
-    if (isDraft && !confirm('¿Descartar todos los cambios no guardados?')) return;
-    discardChanges();
-  };
-
-  const handleExit = () => {
-    if (isDraft && !confirm('Tienes cambios sin guardar. ¿Salir de todos modos?')) return;
-    navigate('/admin/dashboard');
-  };
-
-  // ── Definiciones de modales ─────────────────────────────────────────────────
-
-  const modals: Record<NonNullable<ModalType>, {
-    titulo: string;
-    fields: FieldDef[];
-    values: Record<string, string>;
-    onSave: (d: Record<string, string>) => void;
-  }> = {
-    hero: {
-      titulo: 'Sección Principal (Hero)',
-      fields: [
-        { key: 'titulo', label: 'Título principal', multiline: true },
-        { key: 'subtitulo', label: 'Subtítulo / descripción', multiline: true },
-        { key: 'feature1_titulo', label: 'Característica 1 — Título' },
-        { key: 'feature1_subtitulo', label: 'Característica 1 — Descripción' },
-        { key: 'feature2_titulo', label: 'Característica 2 — Título' },
-        { key: 'feature2_subtitulo', label: 'Característica 2 — Descripción' },
-        { key: 'feature3_titulo', label: 'Característica 3 — Título' },
-        { key: 'feature3_subtitulo', label: 'Característica 3 — Descripción' },
-      ],
-      values: content.hero as unknown as Record<string, string>,
-      onSave: d => updateSection('hero', d as any),
-    },
-    nosotros: {
-      titulo: 'Quiénes Somos — Encabezado',
-      fields: [
-        { key: 'titulo', label: 'Título de sección' },
-        { key: 'descripcion', label: 'Descripción general', multiline: true },
-      ],
-      values: { titulo: content.nosotros.titulo, descripcion: content.nosotros.descripcion },
-      onSave: d => updateSection('nosotros', d as any),
-    },
-    mision: {
-      titulo: 'Nuestra Misión',
-      fields: [
-        { key: 'mision_titulo', label: 'Título' },
-        { key: 'mision_texto', label: 'Texto', multiline: true },
-      ],
-      values: { mision_titulo: content.nosotros.mision_titulo, mision_texto: content.nosotros.mision_texto },
-      onSave: d => updateSection('nosotros', d as any),
-    },
-    vision: {
-      titulo: 'Nuestra Visión',
-      fields: [
-        { key: 'vision_titulo', label: 'Título' },
-        { key: 'vision_texto', label: 'Texto', multiline: true },
-      ],
-      values: { vision_titulo: content.nosotros.vision_titulo, vision_texto: content.nosotros.vision_texto },
-      onSave: d => updateSection('nosotros', d as any),
-    },
-    valores: {
-      titulo: 'Nuestros Valores',
-      fields: [
-        { key: 'valores_titulo', label: 'Título' },
-        { key: 'valores_texto', label: 'Texto', multiline: true },
-      ],
-      values: { valores_titulo: content.nosotros.valores_titulo, valores_texto: content.nosotros.valores_texto },
-      onSave: d => updateSection('nosotros', d as any),
-    },
-    metodologia: {
-      titulo: 'Metodología — Encabezado',
-      fields: [
-        { key: 'titulo', label: 'Título de sección' },
-        { key: 'descripcion', label: 'Descripción', multiline: true },
-      ],
-      values: { titulo: content.metodologia.titulo, descripcion: content.metodologia.descripcion },
-      onSave: d => updateSection('metodologia', d as any),
-    },
-    paso1: {
-      titulo: 'Paso 1',
-      fields: [{ key: 'paso1_titulo', label: 'Título' }, { key: 'paso1_texto', label: 'Descripción', multiline: true }],
-      values: { paso1_titulo: content.metodologia.paso1_titulo, paso1_texto: content.metodologia.paso1_texto },
-      onSave: d => updateSection('metodologia', d as any),
-    },
-    paso2: {
-      titulo: 'Paso 2',
-      fields: [{ key: 'paso2_titulo', label: 'Título' }, { key: 'paso2_texto', label: 'Descripción', multiline: true }],
-      values: { paso2_titulo: content.metodologia.paso2_titulo, paso2_texto: content.metodologia.paso2_texto },
-      onSave: d => updateSection('metodologia', d as any),
-    },
-    paso3: {
-      titulo: 'Paso 3',
-      fields: [{ key: 'paso3_titulo', label: 'Título' }, { key: 'paso3_texto', label: 'Descripción', multiline: true }],
-      values: { paso3_titulo: content.metodologia.paso3_titulo, paso3_texto: content.metodologia.paso3_texto },
-      onSave: d => updateSection('metodologia', d as any),
-    },
-    paso4: {
-      titulo: 'Paso 4',
-      fields: [{ key: 'paso4_titulo', label: 'Título' }, { key: 'paso4_texto', label: 'Descripción', multiline: true }],
-      values: { paso4_titulo: content.metodologia.paso4_titulo, paso4_texto: content.metodologia.paso4_texto },
-      onSave: d => updateSection('metodologia', d as any),
-    },
-    clientes: {
-      titulo: 'Clientes — Encabezado',
-      fields: [
-        { key: 'titulo', label: 'Título de sección' },
-        { key: 'descripcion', label: 'Descripción', multiline: true },
-      ],
-      values: { titulo: content.clientes.titulo, descripcion: content.clientes.descripcion },
-      onSave: d => updateSection('clientes', d as any),
-    },
-    testimonio1: {
-      titulo: 'Testimonio 1',
-      fields: [
-        { key: 'nombre', label: 'Nombre' },
-        { key: 'cargo', label: 'Cargo / Empresa' },
-        { key: 'texto', label: 'Testimonio', multiline: true },
-      ],
-      values: content.clientes.testimonio1 as unknown as Record<string, string>,
-      onSave: d => updateSection('clientes', { testimonio1: d as any }),
-    },
-    testimonio2: {
-      titulo: 'Testimonio 2',
-      fields: [
-        { key: 'nombre', label: 'Nombre' },
-        { key: 'cargo', label: 'Cargo / Empresa' },
-        { key: 'texto', label: 'Testimonio', multiline: true },
-      ],
-      values: content.clientes.testimonio2 as unknown as Record<string, string>,
-      onSave: d => updateSection('clientes', { testimonio2: d as any }),
-    },
-    noticias: {
-      titulo: 'Noticias — Encabezado',
-      fields: [
-        { key: 'titulo', label: 'Título de sección' },
-        { key: 'descripcion', label: 'Descripción', multiline: true },
-      ],
-      values: { titulo: content.noticias.titulo, descripcion: content.noticias.descripcion },
-      onSave: d => updateSection('noticias', d as any),
-    },
-    noticia1: {
-      titulo: 'Noticia 1',
-      fields: [
-        { key: 'fecha', label: 'Fecha' },
-        { key: 'titulo', label: 'Título' },
-        { key: 'resumen', label: 'Resumen', multiline: true },
-      ],
-      values: content.noticias.noticia1 as unknown as Record<string, string>,
-      onSave: d => updateSection('noticias', { noticia1: d as any }),
-    },
-    noticia2: {
-      titulo: 'Noticia 2',
-      fields: [
-        { key: 'fecha', label: 'Fecha' },
-        { key: 'titulo', label: 'Título' },
-        { key: 'resumen', label: 'Resumen', multiline: true },
-      ],
-      values: content.noticias.noticia2 as unknown as Record<string, string>,
-      onSave: d => updateSection('noticias', { noticia2: d as any }),
-    },
-    noticia3: {
-      titulo: 'Noticia 3',
-      fields: [
-        { key: 'fecha', label: 'Fecha' },
-        { key: 'titulo', label: 'Título' },
-        { key: 'resumen', label: 'Resumen', multiline: true },
-      ],
-      values: content.noticias.noticia3 as unknown as Record<string, string>,
-      onSave: d => updateSection('noticias', { noticia3: d as any }),
-    },
-    footer: {
-      titulo: 'Footer / Contacto',
-      fields: [
-        { key: 'nombre_empresa', label: 'Nombre de la empresa' },
-        { key: 'eslogan', label: 'Eslogan', multiline: true },
-        { key: 'email', label: 'Email de contacto' },
-        { key: 'telefono', label: 'Teléfono' },
-        { key: 'copyright', label: 'Texto de copyright' },
-      ],
-      values: content.footer as unknown as Record<string, string>,
-      onSave: d => updateSection('footer', d as any),
-    },
-  };
-
-  const modalDef = modalActivo ? modals[modalActivo] : null;
-
-  // ── Render landing con overlays ─────────────────────────────────────────────
+  const abrir = (m: ModalType) => { if (!vistaPrevia) setModal(m); };
+  const cerrar = () => setModal(null);
 
   return (
     <div className="min-h-screen bg-white">
 
-      {/* ── BANNER DE MODO EDICIÓN ── */}
-      <div className="fixed top-0 left-0 right-0 z-[100] bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+      {/* Banner z-[200] — siempre encima del navbar (z-50) */}
+      <div className="fixed top-0 left-0 right-0 z-[200] bg-slate-900 text-white h-14 border-b border-amber-500/30 shadow-xl">
+        <div className="max-w-7xl mx-auto h-full px-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Pencil size={18} />
-            <span className="font-bold text-sm uppercase tracking-wide">Modo Edición — Landing Page</span>
-            {isDraft && (
-              <span className="flex items-center gap-1 text-xs bg-white/20 px-2 py-0.5 rounded-full">
-                <AlertTriangle size={12} /> Cambios sin guardar
-              </span>
-            )}
-            {!isDraft && lastSaved && (
-              <span className="text-xs text-amber-100">
-                Guardado {lastSaved.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
+            <div className="p-1.5 bg-amber-500 rounded text-slate-900"><Pencil size={15} /></div>
+            <div>
+              <span className="font-black text-xs uppercase tracking-widest">Editor Landing</span>
+              {isDraft
+                ? <p className="text-[10px] text-amber-400 font-bold flex items-center gap-1 mt-0.5"><AlertTriangle size={9} /> Cambios sin guardar</p>
+                : lastSaved
+                  ? <p className="text-[10px] text-slate-400 mt-0.5">Guardado {lastSaved.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}</p>
+                  : null
+              }
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setVistaPrevia(v => !v)}
-              className="px-4 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition flex items-center gap-1.5"
-            >
-              <Eye size={15} /> {vistaPrevia ? 'Salir vista previa' : 'Vista previa'}
+            <button onClick={() => setVistaPrevia(v => !v)} className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 transition-all ${vistaPrevia ? 'bg-amber-500 text-slate-900' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'}`}>
+              {vistaPrevia ? <Pencil size={13} /> : <Eye size={13} />} {vistaPrevia ? 'Editar' : 'Vista Previa'}
             </button>
-            <button
-              onClick={handleDiscard}
-              className="px-4 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition flex items-center gap-1.5"
-            >
-              <RotateCcw size={15} /> Descartar
+            <button onClick={() => { if (confirm('¿Descartar cambios?')) discardChanges(); }} disabled={!isDraft} className="p-1.5 text-slate-400 hover:text-red-400 transition-colors disabled:opacity-20 disabled:cursor-not-allowed" title="Descartar">
+              <RotateCcw size={17} />
             </button>
-            <button
-              onClick={handleSave}
-              className="px-4 py-1.5 bg-white text-amber-600 hover:bg-amber-50 rounded-lg text-sm font-bold transition flex items-center gap-1.5"
-            >
-              <Save size={15} /> Guardar
+            <button onClick={saveContent} disabled={!isDraft} className="bg-amber-500 hover:bg-amber-600 disabled:bg-slate-800 disabled:text-slate-600 text-slate-900 px-4 py-1.5 rounded font-black text-xs flex items-center gap-1.5 transition-all">
+              <Save size={13} /> Guardar
             </button>
-            <button
-              onClick={handleExit}
-              className="px-4 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-sm font-bold transition flex items-center gap-1.5"
-            >
-              <ArrowLeft size={15} /> Salir
+            <div className="w-px h-6 bg-slate-700 mx-1" />
+            <button onClick={() => { if (!isDraft || confirm('Tienes cambios sin guardar. ¿Salir?')) navigate('/admin/dashboard'); }} className="p-1.5 text-slate-400 hover:text-white transition-colors">
+              <ArrowLeft size={20} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Espaciador para el banner fijo */}
-      <div className="h-14" />
+      {/* Contenido */}
+      <div className="pt-14">
+        <EditNavbar />
+        <div className="h-16" />
 
-      {/* ── LANDING CON OVERLAYS ── */}
-      <div className={vistaPrevia ? 'pointer-events-none' : ''}>
-
-        {/* NAVBAR (no editable, solo visual) */}
-        <nav className="sticky top-14 z-50 bg-white/95 backdrop-blur shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-            <div className="text-2xl font-bold text-jc-blue">{content.footer.nombre_empresa}</div>
-            <div className="hidden md:flex space-x-8 text-sm text-slate-700">
-              {['Inicio', 'Quiénes Somos', 'Cursos', 'Metodología', 'Clientes', 'Noticias', 'Contacto'].map(l => (
-                <span key={l} className="cursor-default">{l}</span>
-              ))}
-            </div>
-            <button className="bg-jc-blue text-white px-5 py-2 rounded-lg text-sm font-semibold opacity-60 cursor-default">
-              Iniciar Sesión
-            </button>
-          </div>
-        </nav>
-
-        {/* HERO */}
-        <EditableSection label="Sección principal" onEdit={() => !vistaPrevia && setModalActivo('hero')}>
-          <section id="inicio" className="pt-16 pb-20 bg-gradient-to-br from-jc-blue via-jc-blue-dark to-jc-calipso text-white">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="grid md:grid-cols-2 gap-12 items-center">
-                <div>
-                  <h1 className="text-4xl sm:text-5xl font-bold mb-6 leading-tight">{content.hero.titulo}</h1>
-                  <p className="text-xl mb-8 text-blue-100">{content.hero.subtitulo}</p>
-                  <div className="flex gap-4">
-                    <span className="px-6 py-3 bg-white text-jc-blue rounded-lg font-semibold text-sm">Ver Cursos</span>
-                    <span className="px-6 py-3 border-2 border-white text-white rounded-lg font-semibold text-sm">Contáctanos</span>
-                  </div>
-                </div>
-                <div className="hidden md:block">
-                  <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 space-y-5">
-                    {[
-                      { icon: <CheckCircle size={22} />, t: content.hero.feature1_titulo, s: content.hero.feature1_subtitulo },
-                      { icon: <Clock       size={22} />, t: content.hero.feature2_titulo, s: content.hero.feature2_subtitulo },
-                      { icon: <Users       size={22} />, t: content.hero.feature3_titulo, s: content.hero.feature3_subtitulo },
-                    ].map((f, i) => (
-                      <div key={i} className="flex items-start gap-4">
-                        <div className="bg-white/20 p-3 rounded-lg flex-shrink-0">{f.icon}</div>
-                        <div><p className="font-semibold">{f.t}</p><p className="text-sm text-blue-200">{f.s}</p></div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
+        <EditableSection label="Hero" onEdit={() => abrir('hero')} vistaPrevia={vistaPrevia}>
+          <HeroSection content={content.hero} />
         </EditableSection>
 
-        {/* QUIÉNES SOMOS */}
-        <section id="nosotros" className="py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <EditableSection label="Quiénes Somos — encabezado" onEdit={() => !vistaPrevia && setModalActivo('nosotros')}>
-              <div className="text-center mb-16 py-4">
-                <h2 className="text-4xl font-bold text-slate-900 mb-4">{content.nosotros.titulo}</h2>
-                <p className="text-xl text-slate-600 max-w-3xl mx-auto">{content.nosotros.descripcion}</p>
-              </div>
-            </EditableSection>
-            <div className="grid md:grid-cols-3 gap-8">
-              {[
-                { key: 'mision' as const, titulo: content.nosotros.mision_titulo, texto: content.nosotros.mision_texto },
-                { key: 'vision' as const, titulo: content.nosotros.vision_titulo, texto: content.nosotros.vision_texto },
-                { key: 'valores' as const, titulo: content.nosotros.valores_titulo, texto: content.nosotros.valores_texto },
-              ].map(card => (
-                <EditableSection key={card.key} label={card.titulo} onEdit={() => !vistaPrevia && setModalActivo(card.key)}>
-                  <div className="text-center p-8 bg-slate-50 rounded-xl">
-                    <div className="bg-jc-calipso/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <span className="text-2xl font-bold text-jc-blue">✦</span>
-                    </div>
-                    <h3 className="text-xl font-bold mb-2">{card.titulo}</h3>
-                    <p className="text-slate-600 text-sm">{card.texto}</p>
-                  </div>
-                </EditableSection>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* METODOLOGÍA */}
-        <section id="metodologia" className="py-20 bg-slate-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <EditableSection label="Metodología — encabezado" onEdit={() => !vistaPrevia && setModalActivo('metodologia')}>
-              <div className="text-center mb-16 py-4">
-                <h2 className="text-4xl font-bold text-slate-900 mb-4">{content.metodologia.titulo}</h2>
-                <p className="text-xl text-slate-600 max-w-3xl mx-auto">{content.metodologia.descripcion}</p>
-              </div>
-            </EditableSection>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {[
-                { key: 'paso1' as const, n: 1, titulo: content.metodologia.paso1_titulo, texto: content.metodologia.paso1_texto },
-                { key: 'paso2' as const, n: 2, titulo: content.metodologia.paso2_titulo, texto: content.metodologia.paso2_texto },
-                { key: 'paso3' as const, n: 3, titulo: content.metodologia.paso3_titulo, texto: content.metodologia.paso3_texto },
-                { key: 'paso4' as const, n: 4, titulo: content.metodologia.paso4_titulo, texto: content.metodologia.paso4_texto },
-              ].map(paso => (
-                <EditableSection key={paso.key} label={`Paso ${paso.n}`} onEdit={() => !vistaPrevia && setModalActivo(paso.key)}>
-                  <div className="text-center p-6">
-                    <div className="bg-jc-calipso/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <span className="text-3xl font-bold text-jc-blue">{paso.n}</span>
-                    </div>
-                    <h3 className="text-lg font-bold mb-2">{paso.titulo}</h3>
-                    <p className="text-slate-600 text-sm">{paso.texto}</p>
-                  </div>
-                </EditableSection>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* CLIENTES */}
-        <section id="clientes" className="py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <EditableSection label="Clientes — encabezado" onEdit={() => !vistaPrevia && setModalActivo('clientes')}>
-              <div className="text-center mb-16 py-4">
-                <h2 className="text-4xl font-bold text-slate-900 mb-4">{content.clientes.titulo}</h2>
-                <p className="text-xl text-slate-600 max-w-3xl mx-auto">{content.clientes.descripcion}</p>
-              </div>
-            </EditableSection>
-            <div className="grid md:grid-cols-2 gap-8 mt-8">
-              {[
-                { key: 'testimonio1' as const, data: content.clientes.testimonio1 },
-                { key: 'testimonio2' as const, data: content.clientes.testimonio2 },
-              ].map(t => (
-                <EditableSection key={t.key} label={`Testimonio`} onEdit={() => !vistaPrevia && setModalActivo(t.key)}>
-                  <div className="bg-white p-8 rounded-xl shadow-md border-l-4 border-jc-calipso">
-                    <div className="flex items-center mb-4">
-                      <div className="w-12 h-12 bg-jc-calipso/20 rounded-full mr-4 flex items-center justify-center font-bold text-jc-blue">
-                        {t.data.nombre.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-bold">{t.data.nombre}</p>
-                        <p className="text-sm text-slate-500">{t.data.cargo}</p>
-                      </div>
-                    </div>
-                    <p className="text-slate-600 italic">"{t.data.texto}"</p>
-                    <div className="mt-3 text-yellow-400 text-lg">⭐⭐⭐⭐⭐</div>
-                  </div>
-                </EditableSection>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* NOTICIAS */}
-        <section id="noticias" className="py-20 bg-slate-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <EditableSection label="Noticias — encabezado" onEdit={() => !vistaPrevia && setModalActivo('noticias')}>
-              <div className="text-center mb-16 py-4">
-                <h2 className="text-4xl font-bold text-slate-900 mb-4">{content.noticias.titulo}</h2>
-                <p className="text-xl text-slate-600 max-w-3xl mx-auto">{content.noticias.descripcion}</p>
-              </div>
-            </EditableSection>
-            <div className="grid md:grid-cols-3 gap-8">
-              {[
-                { key: 'noticia1' as const, data: content.noticias.noticia1 },
-                { key: 'noticia2' as const, data: content.noticias.noticia2 },
-                { key: 'noticia3' as const, data: content.noticias.noticia3 },
-              ].map(n => (
-                <EditableSection key={n.key} label="Noticia" onEdit={() => !vistaPrevia && setModalActivo(n.key)}>
-                  <article className="bg-white rounded-xl overflow-hidden shadow-md">
-                    <div className="h-40 bg-gradient-to-br from-jc-blue to-jc-calipso" />
-                    <div className="p-6">
-                      <span className="text-xs text-slate-500">{n.data.fecha}</span>
-                      <h3 className="text-lg font-bold mt-1 mb-2">{n.data.titulo}</h3>
-                      <p className="text-slate-600 text-sm mb-3">{n.data.resumen}</p>
-                      <span className="text-jc-blue font-semibold text-sm">Leer más →</span>
-                    </div>
-                  </article>
-                </EditableSection>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* FOOTER */}
-        <EditableSection label="Footer / Contacto" onEdit={() => !vistaPrevia && setModalActivo('footer')}>
-          <footer id="contacto" className="bg-slate-900 text-white py-12">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-              <div className="text-2xl font-bold mb-3 text-jc-calipso">{content.footer.nombre_empresa}</div>
-              <p className="text-slate-400 mb-6">{content.footer.eslogan}</p>
-              <div className="flex justify-center gap-8 mb-6">
-                <span className="text-slate-400">✉ {content.footer.email}</span>
-                <span className="text-slate-400">☎ {content.footer.telefono}</span>
-              </div>
-              <div className="border-t border-slate-800 pt-6 text-sm text-slate-500">
-                {content.footer.copyright}
-              </div>
-            </div>
-          </footer>
+        <EditableSection label="Quiénes Somos" onEdit={() => abrir('nosotros')} vistaPrevia={vistaPrevia}>
+          <AboutSection content={content.nosotros} />
         </EditableSection>
 
+        <EditableSection label="Cursos Destacados" onEdit={() => abrir('cursos')} vistaPrevia={vistaPrevia}>
+          <CoursesSection content={content.cursos} />
+        </EditableSection>
+
+        <EditableSection label="Metodología" onEdit={() => abrir('metodologia')} vistaPrevia={vistaPrevia}>
+          <MethodologySection content={content.metodologia} />
+        </EditableSection>
+
+        {/* Clientes tiene dos botones: texto y logos */}
+        <div className="relative"
+          onMouseEnter={() => {}}
+        >
+          {!vistaPrevia && (
+            <div className="absolute top-4 right-4 z-40 flex gap-2">
+              <button onClick={() => abrir('clientes_logos')} className="bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-2 px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider">
+                <Upload size={13} /> Logos
+              </button>
+              <button onClick={() => abrir('clientes_texto')} className="bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-2 px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider">
+                <Pencil size={13} /> Textos
+              </button>
+            </div>
+          )}
+          <ClientsSection content={content.clientes} />
+        </div>
+
+        <EditableSection label="Noticias" onEdit={() => abrir('noticias')} vistaPrevia={vistaPrevia}>
+          <NewsSection content={content.noticias} />
+        </EditableSection>
+
+        <EditableSection label="Footer" onEdit={() => abrir('footer')} vistaPrevia={vistaPrevia}>
+          <LandingFooter content={content.footer} />
+        </EditableSection>
       </div>
 
-      {/* ── MODAL ACTIVO ── */}
-      {modalActivo && modalDef && (
-        <EditModal
-          titulo={modalDef.titulo}
-          fields={modalDef.fields}
-          values={modalDef.values}
-          onClose={() => setModalActivo(null)}
-          onSave={data => {
-            modalDef.onSave(data);
-            setModalActivo(null);
+      {/* ── Modales ── */}
+
+      {modal === 'hero' && (
+        <EditModal titulo="Sección Principal" fields={[
+          { key: 'titulo', label: 'Título principal', type: 'textarea' },
+          { key: 'subtitulo', label: 'Subtítulo', type: 'textarea' },
+          { key: 'feature1_titulo', label: 'Característica 1 — Título' },
+          { key: 'feature1_subtitulo', label: 'Característica 1 — Descripción' },
+          { key: 'feature2_titulo', label: 'Característica 2 — Título' },
+          { key: 'feature2_subtitulo', label: 'Característica 2 — Descripción' },
+          { key: 'feature3_titulo', label: 'Característica 3 — Título' },
+          { key: 'feature3_subtitulo', label: 'Característica 3 — Descripción' },
+        ]} values={content.hero as any} onClose={cerrar} onSave={d => { updateSection('hero', d as any); cerrar(); }} />
+      )}
+
+      {modal === 'nosotros' && (
+        <EditModal titulo="Quiénes Somos" fields={[
+          { key: 'titulo', label: 'Título sección' },
+          { key: 'descripcion', label: 'Descripción', type: 'textarea' },
+          { key: 'mision_titulo', label: 'Misión — Título' },
+          { key: 'mision_texto', label: 'Misión — Texto', type: 'textarea' },
+          { key: 'vision_titulo', label: 'Visión — Título' },
+          { key: 'vision_texto', label: 'Visión — Texto', type: 'textarea' },
+          { key: 'valores_titulo', label: 'Valores — Título' },
+          { key: 'valores_texto', label: 'Valores — Texto', type: 'textarea' },
+        ]} values={content.nosotros as any} onClose={cerrar} onSave={d => { updateSection('nosotros', d as any); cerrar(); }} />
+      )}
+
+      {modal === 'cursos' && (
+        <ModalCursos destacados={content.cursos.destacados} onClose={cerrar}
+          onSave={d => { updateSection('cursos', { destacados: d }); cerrar(); }} />
+      )}
+
+      {modal === 'metodologia' && (
+        <EditModal titulo="Metodología" fields={[
+          { key: 'titulo', label: 'Título sección' },
+          { key: 'descripcion', label: 'Descripción', type: 'textarea' },
+          { key: 'paso1_titulo', label: 'Paso 1 — Título' }, { key: 'paso1_texto', label: 'Paso 1 — Texto', type: 'textarea' },
+          { key: 'paso2_titulo', label: 'Paso 2 — Título' }, { key: 'paso2_texto', label: 'Paso 2 — Texto', type: 'textarea' },
+          { key: 'paso3_titulo', label: 'Paso 3 — Título' }, { key: 'paso3_texto', label: 'Paso 3 — Texto', type: 'textarea' },
+          { key: 'paso4_titulo', label: 'Paso 4 — Título' }, { key: 'paso4_texto', label: 'Paso 4 — Texto', type: 'textarea' },
+        ]} values={content.metodologia as any} onClose={cerrar} onSave={d => { updateSection('metodologia', d as any); cerrar(); }} />
+      )}
+
+      {modal === 'clientes_texto' && (
+        <EditModal titulo="Clientes — Textos" fields={[
+          { key: 'titulo', label: 'Título sección' },
+          { key: 'descripcion', label: 'Descripción', type: 'textarea' },
+          { key: 'testimonio1.nombre', label: 'Testimonio 1 — Nombre' },
+          { key: 'testimonio1.cargo', label: 'Testimonio 1 — Cargo - Empresa' },
+          { key: 'testimonio1.texto', label: 'Testimonio 1 — Texto', type: 'textarea' },
+          { key: 'testimonio2.nombre', label: 'Testimonio 2 — Nombre' },
+          { key: 'testimonio2.cargo', label: 'Testimonio 2 — Cargo - Empresa' },
+          { key: 'testimonio2.texto', label: 'Testimonio 2 — Texto', type: 'textarea' },
+        ]} values={{
+          titulo: content.clientes.titulo,
+          descripcion: content.clientes.descripcion,
+          'testimonio1.nombre': content.clientes.testimonio1.nombre,
+          'testimonio1.cargo': content.clientes.testimonio1.cargo,
+          'testimonio1.texto': content.clientes.testimonio1.texto,
+          'testimonio2.nombre': content.clientes.testimonio2.nombre,
+          'testimonio2.cargo': content.clientes.testimonio2.cargo,
+          'testimonio2.texto': content.clientes.testimonio2.texto,
+        }} onClose={cerrar} onSave={d => {
+          updateSection('clientes', {
+            titulo: d.titulo, descripcion: d.descripcion,
+            testimonio1: { nombre: d['testimonio1.nombre'], cargo: d['testimonio1.cargo'], texto: d['testimonio1.texto'] },
+            testimonio2: { nombre: d['testimonio2.nombre'], cargo: d['testimonio2.cargo'], texto: d['testimonio2.texto'] },
+          });
+          cerrar();
+        }} />
+      )}
+
+      {modal === 'clientes_logos' && (
+        <ModalLogos logos={content.clientes.logos} onClose={cerrar}
+          onSave={d => { updateSection('clientes', { logos: d }); cerrar(); }} />
+      )}
+
+      {modal === 'noticias' && (
+        <ModalNoticias
+          titulo={content.noticias.titulo}
+          descripcion={content.noticias.descripcion}
+          noticias={[content.noticias.noticia1, content.noticias.noticia2, content.noticias.noticia3]}
+          onClose={cerrar}
+          onSave={({ titulo, descripcion, noticias }) => {
+            updateSection('noticias', { titulo, descripcion, noticia1: noticias[0], noticia2: noticias[1], noticia3: noticias[2] });
+            cerrar();
           }}
         />
+      )}
+
+      {modal === 'footer' && (
+        <EditModal titulo="Footer / Contacto" fields={[
+          { key: 'nombre_empresa', label: 'Nombre empresa' },
+          { key: 'eslogan', label: 'Eslogan', type: 'textarea' },
+          { key: 'email', label: 'Email' },
+          { key: 'telefono', label: 'Teléfono' },
+          { key: 'copyright', label: 'Copyright' },
+        ]} values={content.footer as any} onClose={cerrar} onSave={d => { updateSection('footer', d as any); cerrar(); }} />
       )}
     </div>
   );

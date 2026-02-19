@@ -1,20 +1,26 @@
 // src/components/landing/ClientsSection.tsx
 import { TestimonialCard } from './TestimonialCard';
+import type { ClientesContent } from '@/hooks/useLandingContent';
+import { LANDING_DEFAULTS } from '@/hooks/useLandingContent';
 
-export function ClientsSection() {
+interface ClientsSectionProps {
+  content?: ClientesContent;
+}
+
+export function ClientsSection({ content = LANDING_DEFAULTS.clientes }: ClientsSectionProps) {
   const testimonials = [
     {
-      name: 'María González',
-      role: 'Gerente de RRHH',
-      company: 'Empresa ABC',
-      testimonial: 'La plataforma es muy intuitiva y nuestros colaboradores han podido capacitarse sin problemas. El seguimiento en tiempo real nos permite ver el progreso de cada uno.',
+      name: content.testimonio1.nombre,
+      role: content.testimonio1.cargo.split(' - ')[0] ?? content.testimonio1.cargo,
+      company: content.testimonio1.cargo.split(' - ')[1] ?? '',
+      testimonial: content.testimonio1.texto,
       rating: 5,
     },
     {
-      name: 'Carlos Rodríguez',
-      role: 'Director General',
-      company: 'Empresa XYZ',
-      testimonial: 'Los cursos están muy bien estructurados y el material es de excelente calidad. La certificación SENCE fue un plus importante para nuestra empresa.',
+      name: content.testimonio2.nombre,
+      role: content.testimonio2.cargo.split(' - ')[0] ?? content.testimonio2.cargo,
+      company: content.testimonio2.cargo.split(' - ')[1] ?? '',
+      testimonial: content.testimonio2.texto,
       rating: 5,
     },
   ];
@@ -22,30 +28,37 @@ export function ClientsSection() {
   return (
     <section id="clientes" className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-gray-900 mb-4 relative inline-block">
-            Nuestros Clientes
-            <span className="absolute bottom-0 left-0 w-20 h-1 bg-jc-calipso rounded-full -mb-2"></span>
+            {content.titulo}
+            <span className="absolute bottom-0 left-0 w-20 h-1 bg-jc-calipso rounded-full -mb-2" />
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto mt-8">
-            Empresas que confían en nuestra plataforma para la capacitación de sus equipos.
-          </p>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto mt-8">{content.descripcion}</p>
         </div>
 
-        {/* Client Logos */}
+        {/* Logos de clientes */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16">
-          {[1, 2, 3, 4].map((i) => (
+          {content.logos.map((logo, i) => (
             <div
               key={i}
               className="bg-white p-8 rounded-xl shadow-md flex items-center justify-center h-32 hover:shadow-lg transition-shadow"
             >
-              <span className="text-2xl font-bold text-gray-300">LOGO {i}</span>
+              {logo.imageUrl ? (
+                <img
+                  src={logo.imageUrl}
+                  alt={logo.nombre || `Logo ${i + 1}`}
+                  className="max-h-16 max-w-full object-contain"
+                />
+              ) : (
+                <span className="text-2xl font-bold text-gray-300">
+                  {logo.nombre || `LOGO ${i + 1}`}
+                </span>
+              )}
             </div>
           ))}
         </div>
 
-        {/* Testimonials */}
+        {/* Testimonios */}
         <div className="grid md:grid-cols-2 gap-8">
           {testimonials.map((testimonial, index) => (
             <TestimonialCard key={index} {...testimonial} />
