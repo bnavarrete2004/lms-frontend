@@ -20,6 +20,9 @@ import { AdminUsuariosPage } from '@/pages/AdminUsuariosPage';
 import { AdminLandingPage } from '@/pages/AdminLandingPage';
 import { AdminConfigPage } from '@/pages/AdminConfigPage';
 import { AdminReportesSencePage } from '@/pages/AdminReportesSencePage';
+import { AdminStatsPage } from '@/pages/AdminStatsPage';
+import { AdminRepoPage } from './pages/AdminRepoPage';
+import { AdminRevisionPage } from '@/pages/AdminRevisionPage';
 
 
 function App() {
@@ -151,6 +154,33 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['administrador']}>
                   <AdminReportesSencePage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/stats"
+              element={
+                <ProtectedRoute allowedRoles={['administrador']}>
+                  <AdminStatsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/repositorio"
+              element={
+                <ProtectedRoute allowedRoles={['administrador']}>
+                  <AdminRepoPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/revision" // <--- Nueva Ruta
+              element={
+                <ProtectedRoute allowedRoles={['administrador']}>
+                  <AdminRevisionPage />
                 </ProtectedRoute>
               }
             />
