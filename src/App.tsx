@@ -11,7 +11,9 @@ import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 // --- PÁGINAS ESTUDIANTE ---
 import { DashboardPage } from '@/pages/StudentDashboardPage'; 
 import { CourseDetailPage } from '@/pages/CourseDetailPage';
-import { LessonPage } from '@/pages/LessonPage';
+import { LessonPage } from '@/pages/LessonPage'; // <--- YA SE USA ABAJO
+import { StudentCoursesPage } from '@/pages/StudentCoursesPage';
+import { StudentProgressPage } from '@/pages/StudentProgressPage';
 
 // --- PÁGINAS RELATOR ---
 import { RelatorDashboardPage } from '@/pages/RelatorDashboardPage';
@@ -31,7 +33,7 @@ import { CrearCursoWizard } from '@/pages/admin/wizard/CrearCursoWizard';
 import { AdminCursoDetailPage } from '@/pages/admin/AdminCursoDetailPage';
 import { AdminCursoEditPage } from '@/pages/admin/AdminCursoEditPage';
 import { AdminUsuariosPage } from '@/pages/AdminUsuariosPage';
-import { AdminRepoPage } from './pages/AdminRepoPage';
+import { AdminRepoPage } from '@/pages/AdminRepoPage'; 
 import { AdminRevisionPage } from '@/pages/AdminRevisionPage';
 import { AdminLandingPage } from '@/pages/AdminLandingPage';
 import { AdminConfigPage } from '@/pages/AdminConfigPage';
@@ -80,193 +82,59 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/student/courses"
+            element={
+              <ProtectedRoute allowedRoles={['estudiante', 'administrador']}>
+                <StudentCoursesPage /> 
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/student/progress"
+            element={
+              <ProtectedRoute allowedRoles={['estudiante', 'administrador']}>
+                <StudentProgressPage /> 
+              </ProtectedRoute>
+            }
+          />
 
           {/* ==========================================
               RUTAS RELATOR
           ========================================== */}
-          <Route
-            path="/relator/dashboard"
-            element={
-              <ProtectedRoute allowedRoles={['relator']}>
-                <RelatorDashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/relator/materiales"
-            element={
-              <ProtectedRoute allowedRoles={['relator']}>
-                <RelatorMaterialesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/relator/subir"
-            element={
-              <ProtectedRoute allowedRoles={['relator']}>
-                <RelatorUploadPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/relator/cursos"
-            element={
-              <ProtectedRoute allowedRoles={['relator']}>
-                <RelatorCursosPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/relator/estudiantes"
-            element={
-              <ProtectedRoute allowedRoles={['relator']}>
-                <RelatorEstudiantesPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/relator/stats"
-            element={
-              <ProtectedRoute allowedRoles={['relator']}>
-                <RelatorStatsPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/relator/notificaciones"
-            element={
-              <ProtectedRoute allowedRoles={['relator']}>
-                <RelatorNotificationsPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/relator/perfil"
-            element={
-              <ProtectedRoute allowedRoles={['relator']}>
-                <RelatorProfilePage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/relator/dashboard" element={<ProtectedRoute allowedRoles={['relator']}><RelatorDashboardPage /></ProtectedRoute>} />
+          <Route path="/relator/materiales" element={<ProtectedRoute allowedRoles={['relator']}><RelatorMaterialesPage /></ProtectedRoute>} />
+          <Route path="/relator/subir" element={<ProtectedRoute allowedRoles={['relator']}><RelatorUploadPage /></ProtectedRoute>} />
+          <Route path="/relator/cursos" element={<ProtectedRoute allowedRoles={['relator']}><RelatorCursosPage /></ProtectedRoute>} />
+          <Route path="/relator/estudiantes" element={<ProtectedRoute allowedRoles={['relator']}><RelatorEstudiantesPage /></ProtectedRoute>} />
+          <Route path="/relator/stats" element={<ProtectedRoute allowedRoles={['relator']}><RelatorStatsPage /></ProtectedRoute>} />
+          <Route path="/relator/notificaciones" element={<ProtectedRoute allowedRoles={['relator']}><RelatorNotificationsPage /></ProtectedRoute>} />
+          <Route path="/relator/perfil" element={<ProtectedRoute allowedRoles={['relator']}><RelatorProfilePage /></ProtectedRoute>} />
 
           {/* ==========================================
               RUTAS ADMINISTRADOR
           ========================================== */}
-          {/* Dashboard y Estadísticas */}
-          <Route
-            path="/admin/dashboard"
-            element={
-              <ProtectedRoute allowedRoles={['administrador']}>
-                <AdminDashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/stats"
-            element={
-              <ProtectedRoute allowedRoles={['administrador']}>
-                <AdminStatsPage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Gestión de Cursos */}
-          <Route
-            path="/admin/cursos"
-            element={
-              <ProtectedRoute allowedRoles={['administrador']}>
-                <AdminCursosPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/cursos/crear"
-            element={
-              <ProtectedRoute allowedRoles={['administrador']}>
-                <CrearCursoWizard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/cursos/:id"
-            element={
-              <ProtectedRoute allowedRoles={['administrador']}>
-                <AdminCursoDetailPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/cursos/:id/editar"
-            element={
-              <ProtectedRoute allowedRoles={['administrador']}>
-                <AdminCursoEditPage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Gestión de Contenido y Usuarios */}
-          <Route
-            path="/admin/revision"
-            element={
-              <ProtectedRoute allowedRoles={['administrador']}>
-                <AdminRevisionPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/repositorio"
-            element={
-              <ProtectedRoute allowedRoles={['administrador']}>
-                <AdminRepoPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/usuarios"
-            element={
-              <ProtectedRoute allowedRoles={['administrador']}>
-                <AdminUsuariosPage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Configuración y Reportes */}
-          <Route
-            path="/admin/landing"
-            element={
-              <ProtectedRoute allowedRoles={['administrador']}>
-                <AdminLandingPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/config"
-            element={
-              <ProtectedRoute allowedRoles={['administrador']}>
-                <AdminConfigPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/reportes"
-            element={
-              <ProtectedRoute allowedRoles={['administrador']}>
-                <AdminReportesSencePage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['administrador']}><AdminDashboardPage /></ProtectedRoute>} />
+          <Route path="/admin/stats" element={<ProtectedRoute allowedRoles={['administrador']}><AdminStatsPage /></ProtectedRoute>} />
+          <Route path="/admin/cursos" element={<ProtectedRoute allowedRoles={['administrador']}><AdminCursosPage /></ProtectedRoute>} />
+          <Route path="/admin/cursos/crear" element={<ProtectedRoute allowedRoles={['administrador']}><CrearCursoWizard /></ProtectedRoute>} />
+          <Route path="/admin/cursos/:id" element={<ProtectedRoute allowedRoles={['administrador']}><AdminCursoDetailPage /></ProtectedRoute>} />
+          <Route path="/admin/cursos/:id/editar" element={<ProtectedRoute allowedRoles={['administrador']}><AdminCursoEditPage /></ProtectedRoute>} />
+          <Route path="/admin/revision" element={<ProtectedRoute allowedRoles={['administrador']}><AdminRevisionPage /></ProtectedRoute>} />
+          <Route path="/admin/repositorio" element={<ProtectedRoute allowedRoles={['administrador']}><AdminRepoPage /></ProtectedRoute>} />
+          <Route path="/admin/usuarios" element={<ProtectedRoute allowedRoles={['administrador']}><AdminUsuariosPage /></ProtectedRoute>} />
+          <Route path="/admin/landing" element={<ProtectedRoute allowedRoles={['administrador']}><AdminLandingPage /></ProtectedRoute>} />
+          <Route path="/admin/config" element={<ProtectedRoute allowedRoles={['administrador']}><AdminConfigPage /></ProtectedRoute>} />
+          <Route path="/admin/reportes" element={<ProtectedRoute allowedRoles={['administrador']}><AdminReportesSencePage /></ProtectedRoute>} />
 
           {/* ==========================================
-              RUTAS DE DESARROLLO (BORRAR EN PRODUCCIÓN)
+              DESARROLLO
           ========================================== */}
           <Route path="/test-api" element={<TestApiPage />} />
           <Route path="/test-services" element={<TestServicesPage />} />
 
-          {/* Fallback - Redirigir cualquier otra ruta a la Landing */}
+          {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
