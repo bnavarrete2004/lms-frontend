@@ -12,7 +12,6 @@ import {
   CheckCircle2, 
   Calendar, 
   TrendingUp,
-  FileText, 
   PieChart, 
   CheckCircle, 
   ChevronLeft, 

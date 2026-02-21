@@ -1,5 +1,5 @@
 // src/api/services/materialService.ts
-// Servicio para gestionar materiales educativos
+// Servicio para gestionar materiales educativos - ACTUALIZADO CON FLUJO DE DISEÑO
 
 import BaseService from './baseService';
 import api from '../axios';
@@ -15,8 +15,11 @@ export interface Material {
   duracion_segundos?: number;
   total_paginas?: number;
   subido_por: number;
+  subido_por_nombre?: string;    // <-- Nuevo: Nombre real del usuario que subió
   relator_autor?: number;
-  estado: 'pendiente' | 'aprobado' | 'rechazado';
+  relator_autor_nombre?: string; // <-- Nuevo: Nombre real del relator autor
+  // Agregado el estado 'en_diseno'
+  estado: 'pendiente' | 'en_diseno' | 'aprobado' | 'rechazado' | 'cambios_solicitados';
   revisado_por?: number;
   fecha_revision?: string;
   comentarios_revision?: string;
@@ -46,9 +49,6 @@ class MaterialService extends BaseService<Material> {
 
   /**
    * Obtiene los materiales asignados a una lección específica
-   * Nota: Esto devuelve objetos LeccionMaterial, no Material directamente
-   * @param leccionId - ID de la lección
-   * @returns Promise con array de materiales
    */
   async getByLeccion(leccionId: number): Promise<LeccionMaterial[]> {
     const response = await api.get('/leccion-material/', {
@@ -58,44 +58,50 @@ class MaterialService extends BaseService<Material> {
   }
 
   /**
-   * Obtiene solo materiales aprobados
-   * @returns Promise con array de materiales aprobados
+   * Obtiene solo materiales OFICIALES (ya maquetados y aprobados)
+   * Útil para el paso 4 del Wizard de cursos.
    */
   async getAprobados(): Promise<Material[]> {
     return this.filter({ estado: 'aprobado' });
   }
 
   /**
-   * Obtiene materiales por categoría
-   * @param categoria - Categoría del material
-   * @returns Promise con array de materiales
+   * Obtiene materiales pendientes de maquetación/diseño (Solo para Admin)
    */
-  async getByCategoria(categoria: string): Promise<Material[]> {
-    return this.filter({ categoria });
+  async getEnDiseno(): Promise<Material[]> {
+    return this.filter({ estado: 'en_diseno' });
   }
 
   /**
-   * Aprobar un material (acción custom)
-   * @param id - ID del material
-   * @param comentarios - Comentarios opcionales
-   * @returns Promise con material aprobado
+   * Aprobar un material (El backend decidirá si pasa a 'aprobado' o 'en_diseno')
    */
   async aprobar(id: number, comentarios?: string): Promise<Material> {
     const response = await api.post(`${this.endpoint}/${id}/aprobar/`, {
-      comentarios_revision: comentarios
+      comentarios: comentarios // Enviamos como 'comentarios' para que coincida con el backend
     });
     return response.data;
   }
 
   /**
-   * Rechazar un material (acción custom)
-   * @param id - ID del material
-   * @param comentarios - Comentarios obligatorios
-   * @returns Promise con material rechazado
+   * Subir versión final maquetada (Acción exclusiva del Admin)
+   * @param id - ID del material original
+   * @param url - URL del nuevo archivo en Cloudinary (con diseño)
+   * @param size - Tamaño del nuevo archivo
+   */
+  async subirVersionFinal(id: number, url: string, size?: number): Promise<Material> {
+    const response = await api.post(`${this.endpoint}/${id}/subir_version_final/`, {
+      archivo_url: url,
+      archivo_size: size
+    });
+    return response.data;
+  }
+
+  /**
+   * Rechazar un material
    */
   async rechazar(id: number, comentarios: string): Promise<Material> {
     const response = await api.post(`${this.endpoint}/${id}/rechazar/`, {
-      comentarios_revision: comentarios
+      comentarios: comentarios
     });
     return response.data;
   }

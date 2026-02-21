@@ -57,15 +57,21 @@ export function AdminRevisionPage() {
   }, []);
 
   // ── Handlers de Acción ──────────────────────────────────────────────────────
+  const [materialAprobar, setMaterialAprobar] = useState<Material | null>(null);
 
-  const handleApprove = async (id: number) => {
-    if (!window.confirm("¿Aprobar este material?\n\nEstará disponible inmediatamente para los estudiantes.")) return;
-    try {
-      await api.post(`/materiales/${id}/aprobar/`);
-      setMateriales(prev => prev.filter(m => m.id !== id));
-      alert(`Material #${id} aprobado exitosamente.`);
-    } catch { alert("Error al aprobar."); }
-  };
+  const handleApprove = async () => {
+  if (!materialAprobar) return;
+  setIsProcessing(true);
+  try {
+    await api.post(`/materiales/${materialAprobar.id}/aprobar/`);
+    setMateriales(prev => prev.filter(m => m.id !== materialAprobar.id));
+    setMaterialAprobar(null);
+  } catch (err: any) { 
+    console.error("Error:", err.response?.data);
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   const handleConfirmAction = async (type: 'rechazar' | 'cambios') => {
     const targetId = type === 'rechazar' ? modalRechazo.id : modalCambios.id;
@@ -200,9 +206,12 @@ export function AdminRevisionPage() {
                                             <a href={m.archivo_url} target="_blank" rel="noreferrer" className="px-6 py-2 bg-blue-500 text-white rounded-lg text-xs font-bold hover:bg-blue-600 transition flex items-center gap-2">
                                                 <Info size={14} /> Vista Previa
                                             </a>
-                                            <button onClick={() => handleApprove(m.id)} className="px-6 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 transition flex items-center gap-2">
+                                            <button 
+                                                onClick={() => setMaterialAprobar(m)} 
+                                                className="px-6 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 transition flex items-center gap-2"
+                                                >
                                                 <CheckCircle2 size={14} /> Aprobar
-                                            </button>
+                                                </button>
                                             <button onClick={() => setModalRechazo({ active: true, id: m.id })} className="px-6 py-2 bg-red-500 text-white rounded-lg text-xs font-bold hover:bg-red-600 transition flex items-center gap-2">
                                                 <XCircle size={14} /> Rechazar
                                             </button>
@@ -253,6 +262,38 @@ export function AdminRevisionPage() {
             </div>
         </div>
       )}
+      {materialAprobar && (
+  <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-[4px]">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+          <CheckCircle2 className="text-green-600" size={20} />
+        </div>
+        <h3 className="font-bold text-slate-800">¿Aprobar este material?</h3>
+      </div>
+      <p className="text-sm text-slate-600 mb-6">
+        Se notificará al relator y el material quedará disponible en el repositorio:
+        <br/>
+        <span className="font-semibold text-slate-800">"{materialAprobar.nombre}"</span>
+      </p>
+      <div className="flex gap-3">
+        <button 
+          onClick={() => setMaterialAprobar(null)} 
+          className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-bold text-sm"
+        >
+          Cancelar
+        </button>
+        <button 
+          onClick={handleApprove} 
+          disabled={isProcessing}
+          className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-sm disabled:opacity-50"
+        >
+          {isProcessing ? 'Aprobando...' : 'Sí, aprobar'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </MainLayout>
   );
 }
