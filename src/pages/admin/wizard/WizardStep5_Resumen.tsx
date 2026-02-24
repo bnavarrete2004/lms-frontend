@@ -3,8 +3,10 @@
 // Es el único paso que hace llamadas al backend (a través de publicarCurso del hook).
 
 import { useState } from 'react';
-import { ChevronLeft, CheckCircle2, Pencil, BookOpen, Clock, MapPin, Layers } from 'lucide-react';
+import { ChevronLeft, CheckCircle2, Pencil, BookOpen, Clock, MapPin, Layers, AlertCircle } from 'lucide-react';
 import type { DatosCurso, ModuloLocal, LeccionLocal } from '@/hooks/useCursoWizard';
+
+import type { AsignacionLocal } from './WizardStep4_Actividades';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -14,9 +16,10 @@ interface Props {
   curso: DatosCurso;
   modulos: ModuloLocal[];
   lecciones: LeccionLocal[];
+  asignaciones: AsignacionLocal[];
   guardando: boolean;
   leccionesPorModulo: (moduloLocalId: string) => LeccionLocal[];
-  onPublicar: (estado:OpcionPublicacion) => Promise<void>;
+  onPublicar: (estado: OpcionPublicacion) => Promise<void>;
   onAnterior: () => void;
   onIrAPaso: (paso: 1 | 2 | 3 | 4 | 5) => void;
 }
@@ -77,6 +80,7 @@ export function WizardStep5_Resumen({
   curso,
   modulos,
   lecciones,
+  asignaciones: _asignaciones,
   guardando,
   leccionesPorModulo,
   onPublicar,
@@ -85,16 +89,12 @@ export function WizardStep5_Resumen({
 }: Props) {
   const [opcion, setOpcion] = useState<OpcionPublicacion>('activo');
   const [publicado, setPublicado] = useState(false);
+  const [modalConfirm, setModalConfirm] = useState(false);
 
   const totalHoras = modulos.reduce((acc, m) => acc + (Number(m.horas_estimadas) || 0), 0);
 
-  async function handlePublicar() {
-    const confirmMsg = opcion === 'activo'
-      ? '¿Estás seguro de publicar este curso? Quedará disponible inmediatamente.'
-      : '¿Deseas guardar este curso como borrador?';
-
-    if (!window.confirm(confirmMsg)) return;
-
+  async function handleConfirmarPublicacion() {
+    setModalConfirm(false);
     await onPublicar(opcion);
     setPublicado(true);
   }
@@ -272,7 +272,7 @@ export function WizardStep5_Resumen({
         </button>
 
         <button
-          onClick={handlePublicar}
+          onClick={() => setModalConfirm(true)}
           disabled={guardando}
           className={`inline-flex items-center px-12 py-4 rounded-lg font-bold text-lg shadow-lg transition
             ${opcion === 'activo'
@@ -297,6 +297,61 @@ export function WizardStep5_Resumen({
           )}
         </button>
       </div>
+
+      {/* ── Modal de confirmación ────────────────────────────────────── */}
+      {modalConfirm && (
+        <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+            <div className="flex items-center gap-4 mb-6">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                opcion === 'activo' ? 'bg-green-100' : 'bg-slate-100'
+              }`}>
+                {opcion === 'activo'
+                  ? <CheckCircle2 size={24} className="text-green-600" />
+                  : <AlertCircle size={24} className="text-slate-600" />
+                }
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800 text-lg">
+                  {opcion === 'activo' ? '¿Publicar curso ahora?' : '¿Guardar como borrador?'}
+                </h3>
+                <p className="text-sm text-slate-500 mt-0.5">
+                  {opcion === 'activo'
+                    ? 'El curso quedará disponible inmediatamente para inscripciones.'
+                    : 'Podrás publicarlo más tarde desde Gestión de Cursos.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-4 mb-6 border border-slate-200">
+              <p className="text-xs font-bold text-slate-400 uppercase mb-1">Curso</p>
+              <p className="font-semibold text-slate-800">{curso.nombre}</p>
+              <p className="text-xs text-slate-500 mt-1">
+                {modulos.length} módulos · {lecciones.length} lecciones · {totalHoras}h
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setModalConfirm(false)}
+                className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200 transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmarPublicacion}
+                className={`flex-1 py-3 text-white rounded-xl font-bold transition shadow-sm ${
+                  opcion === 'activo'
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-slate-600 hover:bg-slate-700'
+                }`}
+              >
+                {opcion === 'activo' ? 'Sí, publicar' : 'Sí, guardar borrador'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

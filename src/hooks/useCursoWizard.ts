@@ -7,6 +7,15 @@ import { useState, useCallback } from 'react';
 import { cursoService, type Curso } from '@/api/services/cursoService';
 import { moduloService, type CrearModuloPayload } from '@/api/services/moduloService';
 import { leccionService, type CrearLeccionPayload } from '@/api/services/leccionService';
+import api from '@/api/axios';
+
+// Tipo importado desde el paso 4 para evitar dependencia circular
+export interface AsignacionWizard {
+  _asignId: string;
+  leccionLocalId: string;
+  material: { id: number };
+  orden: number;
+}
 
 // ============================================================
 // TIPOS DEL ESTADO DEL WIZARD
@@ -258,7 +267,10 @@ export function useCursoWizard() {
 
   // ── Paso 5: Publicar (único momento en que toca el backend) ──
 
-  const publicarCurso = useCallback(async (estadoSeleccionado: 'activo' | 'borrador' | 'inactivo'): Promise<Curso | null> => {
+  const publicarCurso = useCallback(async (
+    estadoSeleccionado: 'activo' | 'borrador' | 'inactivo',
+    asignaciones: AsignacionWizard[] = []
+  ): Promise<Curso | null> => {
     setState(s => ({ ...s, guardando: true, errorGuardado: null }));
 
     try {
@@ -301,9 +313,12 @@ export function useCursoWizard() {
       }
 
       // 3. Crear lecciones usando los IDs reales de módulo
+      // Guardamos mapa localId → id real para las asignaciones del paso 4
+      const mapaLecciones: Record<string, number> = {};
+
       for (const leccion of [...lecciones].sort((a, b) => a.orden - b.orden)) {
         const moduloRealId = mapaModulos[leccion.moduloLocalId];
-        if (!moduloRealId) continue; // no debería pasar, pero seguridad
+        if (!moduloRealId) continue;
 
         const payload: CrearLeccionPayload = {
           modulo: moduloRealId,
@@ -316,7 +331,28 @@ export function useCursoWizard() {
           publicado: true,
           obligatoria: leccion.obligatoria,
         };
-        await leccionService.crear(payload);
+        const leccionCreada = await leccionService.crear(payload);
+        mapaLecciones[leccion._localId] = leccionCreada.id;
+      }
+
+      // 4. Crear asignaciones leccion-material (paso 4 del wizard)
+      if (asignaciones.length > 0) {
+        for (const asign of asignaciones) {
+          const leccionRealId = mapaLecciones[asign.leccionLocalId];
+          if (!leccionRealId) continue;
+
+          try {
+            await api.post('/leccion-material/', {
+              leccion: leccionRealId,
+              material: asign.material.id,
+              orden: asign.orden,
+              obligatorio: true,
+            });
+          } catch (err) {
+            // No bloquear la publicación si falla una asignación individual
+            console.warn(`No se pudo asignar material ${asign.material.id} a lección ${leccionRealId}:`, err);
+          }
+        }
       }
 
       setState(s => ({ ...s, guardando: false }));

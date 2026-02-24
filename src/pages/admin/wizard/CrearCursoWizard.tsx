@@ -2,17 +2,17 @@
 // Contenedor del wizard de 5 pasos para crear un curso.
 // No usa MainLayout — tiene su propio layout con WizardSidebar.
 
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { WizardStep1_InfoBasica } from './WizardStep1_InfoBasica';
 import { useCursoWizard, type ModuloLocal } from '@/hooks/useCursoWizard';
-import { Logo } from '@/components/ui/Logo'; // <--- AÑADIR
-import { Avatar } from '@/components/ui/Avatar'; // <--- AÑADIR
-// Los siguientes pasos se importarán cuando se construyan:
- import { WizardStep2_Modulos }      from './WizardStep2_Modulos';
- import { WizardStep3_Lecciones }    from './WizardStep3_Lecciones';
- import { WizardStep4_Actividades }  from './WizardStep4_Actividades';
- import { WizardStep5_Resumen }      from './WizardStep5_Resumen';
+import { Logo } from '@/components/ui/Logo';
+import { Avatar } from '@/components/ui/Avatar';
+import { WizardStep2_Modulos }     from './WizardStep2_Modulos';
+import { WizardStep3_Lecciones }   from './WizardStep3_Lecciones';
+import { WizardStep4_Actividades, type AsignacionLocal } from './WizardStep4_Actividades';
+import { WizardStep5_Resumen }     from './WizardStep5_Resumen';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -67,7 +67,6 @@ function Stepper({ pasoActual }: { pasoActual: number }) {
                 </p>
               </div>
 
-              {/* Línea conectora */}
               {!esUltimo && (
                 <div className={`flex-1 h-1 mx-3 mt-[-24px] rounded-full transition-all
                   ${pasoActual > paso.numero ? 'bg-emerald-400' : 'bg-slate-200'}
@@ -82,128 +81,129 @@ function Stepper({ pasoActual }: { pasoActual: number }) {
 }
 
 // ── Sidebar del wizard ────────────────────────────────────────────────────────
-  function WizardSidebar({
-    curso,
-    modulos,
-    userName,
-    userSubtitle,
-    userAvatar,
-    onLogout,
-    onCancelar,
-  }: {
-    curso: any;
-    modulos: ModuloLocal[];
-    userName: string;
-    userSubtitle?: string;
-    userAvatar?: string;
-    onLogout?: () => void;
-    onCancelar: () => void;
-  }) {
-    return (
-      <aside className="w-72 bg-gradient-to-b from-jc-calipso via-jc-cyan to-jc-blue text-white flex flex-col z-20 shadow-2xl flex-shrink-0">
 
-        {/* HEADER: LOGO OFICIAL Y BADGE */}
-        <div className="p-8">
-          <Logo variant="white" size="sm" withText className="mb-2" />
-          
-          <div className="inline-flex items-center bg-white/10 px-3 py-1 rounded-full border border-white/20">
-            <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse" />
-            <span className="text-[10px] uppercase font-semibold tracking-widest text-blue-100">
-              Creando Curso
-            </span>
-          </div>
+function WizardSidebar({
+  curso,
+  modulos,
+  userName,
+  userSubtitle,
+  userAvatar,
+  onLogout,
+  onCancelar,
+}: {
+  curso: any;
+  modulos: ModuloLocal[];
+  userName: string;
+  userSubtitle?: string;
+  userAvatar?: string;
+  onLogout?: () => void;
+  onCancelar: () => void;
+}) {
+  return (
+    <aside className="w-72 bg-gradient-to-b from-jc-calipso via-jc-cyan to-jc-blue text-white flex flex-col z-20 shadow-2xl flex-shrink-0">
+
+      <div className="p-8">
+        <Logo variant="white" size="sm" withText className="mb-2" />
+        <div className="inline-flex items-center bg-white/10 px-3 py-1 rounded-full border border-white/20">
+          <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse" />
+          <span className="text-[10px] uppercase font-semibold tracking-widest text-blue-100">
+            Creando Curso
+          </span>
         </div>
+      </div>
 
-        {/* CONTENIDO CENTRAL: VISTA PREVIA DINÁMICA */}
-        <div className="flex-1 px-6 overflow-y-auto">
-          <h3 className="text-[10px] font-semibold text-blue-300/50 uppercase tracking-widest mb-4">
-            Resumen de Estructura
-          </h3>
+      <div className="flex-1 px-6 overflow-y-auto">
+        <h3 className="text-[10px] font-semibold text-blue-300/50 uppercase tracking-widest mb-4">
+          Resumen de Estructura
+        </h3>
 
-          {/* Datos del curso */}
-          <div className="bg-white/10 rounded-xl p-4 border border-white/20 mb-4">
-            <p className="text-[10px] font-bold text-blue-200 uppercase mb-2">Información Base</p>
-            {curso.nombre ? (
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-white truncate">{curso.nombre}</p>
-                <p className="text-xs text-white/70">
-                  {curso.horas_totales ? `${curso.horas_totales} horas totales` : 'Horas no definidas'}
-                </p>
-              </div>
-            ) : (
-              <p className="text-xs text-white/40 italic">Esperando datos del curso...</p>
-            )}
-          </div>
-
-          {/* Módulos creados */}
-          {modulos.length > 0 && (
-            <div className="bg-white/10 rounded-xl p-4 border border-white/20">
-              <p className="text-[10px] font-bold text-blue-200 uppercase mb-3">
-                Módulos ({modulos.length})
+        <div className="bg-white/10 rounded-xl p-4 border border-white/20 mb-4">
+          <p className="text-[10px] font-bold text-blue-200 uppercase mb-2">Información Base</p>
+          {curso.nombre ? (
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-white truncate">{curso.nombre}</p>
+              <p className="text-xs text-white/70">
+                {curso.horas_totales ? `${curso.horas_totales} horas totales` : 'Horas no definidas'}
               </p>
-              <div className="space-y-2">
-                {modulos.map((m: ModuloLocal, idx: number) => (
-                  <div key={m._localId} className="flex items-center space-x-2">
-                    <span className="w-5 h-5 bg-jc-calipso text-white rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0">
-                      {idx + 1}
-                    </span>
-                    <p className="text-xs text-white/80 truncate">
-                      {m.nombre || <span className="italic opacity-50">Sin nombre</span>}
-                    </p>
-                  </div>
-                ))}
-              </div>
             </div>
+          ) : (
+            <p className="text-xs text-white/40 italic">Esperando datos del curso...</p>
           )}
         </div>
 
-        {/* FOOTER: USUARIO Y LOGOUT (DISEÑO OFICIAL) */}
-        <div className="p-6 bg-black/20 m-4 rounded-xl">
-          <div className="flex items-center mb-3">
-            <Avatar 
-              src={userAvatar} 
-              name={userName} 
-              size="md" 
-              className="mr-3" 
-            />
-            <div className="min-w-0">
-              <p className="text-sm font-semibold truncate">{userName}</p>
-              {userSubtitle && (
-                <p className="text-[10px] text-blue-200 truncate">{userSubtitle}</p>
-              )}
+        {modulos.length > 0 && (
+          <div className="bg-white/10 rounded-xl p-4 border border-white/20">
+            <p className="text-[10px] font-bold text-blue-200 uppercase mb-3">
+              Módulos ({modulos.length})
+            </p>
+            <div className="space-y-2">
+              {modulos.map((m: ModuloLocal, idx: number) => (
+                <div key={m._localId} className="flex items-center space-x-2">
+                  <span className="w-5 h-5 bg-jc-calipso text-white rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                    {idx + 1}
+                  </span>
+                  <p className="text-xs text-white/80 truncate">
+                    {m.nombre || <span className="italic opacity-50">Sin nombre</span>}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
-          
-          <div className="space-y-2">
-            {onLogout && (
-              <button
-                onClick={onLogout}
-                className="block w-full py-2 bg-red-500/20 border border-red-400/30 text-red-100 rounded-lg text-xs font-semibold hover:bg-red-500/30 transition-colors text-center"
-              >
-                Cerrar Sesión
-              </button>
+        )}
+      </div>
+
+      <div className="p-6 bg-black/20 m-4 rounded-xl">
+        <div className="flex items-center mb-3">
+          <Avatar
+            src={userAvatar}
+            name={userName}
+            size="md"
+            className="mr-3"
+          />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold truncate">{userName}</p>
+            {userSubtitle && (
+              <p className="text-[10px] text-blue-200 truncate">{userSubtitle}</p>
             )}
-            <button
-              onClick={onCancelar}
-              className="block w-full py-2 bg-white/5 border border-white/10 text-white rounded-lg text-[10px] font-bold uppercase tracking-tighter hover:bg-white/10 transition-colors text-center"
-            >
-              Cancelar Creación
-            </button>
           </div>
         </div>
-      </aside>
-    );
-  }
+
+        <div className="space-y-2">
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="block w-full py-2 bg-red-500/20 border border-red-400/30 text-red-100 rounded-lg text-xs font-semibold hover:bg-red-500/30 transition-colors text-center"
+            >
+              Cerrar Sesión
+            </button>
+          )}
+          <button
+            onClick={onCancelar}
+            className="block w-full py-2 bg-white/5 border border-white/10 text-white rounded-lg text-[10px] font-bold uppercase tracking-tighter hover:bg-white/10 transition-colors text-center"
+          >
+            Cancelar Creación
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
 // ── Contenedor principal ──────────────────────────────────────────────────────
 
 export function CrearCursoWizard() {
-  const navigate  = useNavigate();
-  const { user, logout }  = useAuth();
-  const wizard    = useCursoWizard();
+  const navigate     = useNavigate();
+  const { user, logout } = useAuth();
+  const wizard       = useCursoWizard();
+
+  // ── Estado de asignaciones (paso 4) ──
+  // Vive aquí para persistir al navegar entre pasos
+  const [asignaciones, setAsignaciones] = useState<AsignacionLocal[]>([]);
 
   const handleCancelar = () => {
     if (window.confirm('¿Estás seguro de cancelar? Se perderá todo el progreso.')) {
       wizard.resetWizard();
+      setAsignaciones([]);
       navigate('/admin/cursos');
     }
   };
@@ -214,13 +214,12 @@ export function CrearCursoWizard() {
   };
 
   const handlePublicar = async (estado: 'activo' | 'borrador' | 'inactivo') => {
-    const curso = await wizard.publicarCurso(estado);
+    const curso = await wizard.publicarCurso(estado, asignaciones);
     if (curso) {
       navigate('/admin/cursos');
     }
   };
 
-  // Renderizar el paso activo
   const renderPaso = () => {
     switch (wizard.pasoActual) {
       case 1:
@@ -243,70 +242,72 @@ export function CrearCursoWizard() {
             onReordenar={wizard.reordenarModulos}
             onSiguiente={wizard.siguientePaso}
             onAnterior={wizard.pasoAnterior}
-            />
+          />
         );
-        case 3:
-          return (
-            <WizardStep3_Lecciones
-              modulos={wizard.modulos}
-              lecciones={wizard.lecciones}
-              onAgregarLeccion={wizard.agregarLeccion}
-              onActualizarLeccion={wizard.actualizarLeccion}
-              onEliminarLeccion={wizard.eliminarLeccion}
-              onSiguiente={wizard.siguientePaso}
-              onAnterior={wizard.pasoAnterior}
-              leccionesPorModulo={wizard.leccionesPorModulo}
-              />
-            );
-            case 4:
-              return (
-                <WizardStep4_Actividades
-                  modulos={wizard.modulos}
-                  lecciones={wizard.lecciones}
-                  leccionesPorModulo={wizard.leccionesPorModulo}
-                  onSiguiente={wizard.siguientePaso}
-                  onAnterior={wizard.pasoAnterior}
-                />
-              );
-              case 5:
-                return (
-                  <WizardStep5_Resumen
-                    curso={wizard.curso}
-                    modulos={wizard.modulos}
-                    lecciones={wizard.lecciones}
-                    guardando={wizard.guardando}
-                    leccionesPorModulo={wizard.leccionesPorModulo}
-                    onPublicar={handlePublicar}
-                    onAnterior={wizard.pasoAnterior}
-                    onIrAPaso={wizard.irAPaso}
-                  />
-                );
-        default:
-          return null;
+      case 3:
+        return (
+          <WizardStep3_Lecciones
+            modulos={wizard.modulos}
+            lecciones={wizard.lecciones}
+            onAgregarLeccion={wizard.agregarLeccion}
+            onActualizarLeccion={wizard.actualizarLeccion}
+            onEliminarLeccion={wizard.eliminarLeccion}
+            onSiguiente={wizard.siguientePaso}
+            onAnterior={wizard.pasoAnterior}
+            leccionesPorModulo={wizard.leccionesPorModulo}
+          />
+        );
+      case 4:
+        return (
+          <WizardStep4_Actividades
+            modulos={wizard.modulos}
+            lecciones={wizard.lecciones}
+            leccionesPorModulo={wizard.leccionesPorModulo}
+            asignaciones={asignaciones}
+            onAsignacionesChange={setAsignaciones}
+            onSiguiente={wizard.siguientePaso}
+            onAnterior={wizard.pasoAnterior}
+          />
+        );
+      case 5:
+        return (
+          <WizardStep5_Resumen
+            curso={wizard.curso}
+            modulos={wizard.modulos}
+            lecciones={wizard.lecciones}
+            asignaciones={asignaciones}
+            guardando={wizard.guardando}
+            leccionesPorModulo={wizard.leccionesPorModulo}
+            onPublicar={handlePublicar}
+            onAnterior={wizard.pasoAnterior}
+            onIrAPaso={wizard.irAPaso}
+          />
+        );
+      default:
+        return null;
     }
   };
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
 
-      {/* Sidebar especial del wizard */}
       <WizardSidebar
         curso={wizard.curso}
         modulos={wizard.modulos}
-        userName={user?.nombre_completo || 
-    (user?.nombre ? `${user.nombre} ${user.apellido}` : '') || 
-    user?.username || 
-    'Administrador'} // <--- PASAR NOMBRE
+        userName={
+          user?.nombre_completo ||
+          (user?.nombre ? `${user.nombre} ${user.apellido}` : '') ||
+          user?.username ||
+          'Administrador'
+        }
         userSubtitle="Superusuario"
-        userAvatar={user?.avatar} 
-        onLogout={handleLogout} 
+        userAvatar={user?.avatar}
+        onLogout={handleLogout}
         onCancelar={handleCancelar}
       />
 
-      {/* Contenido principal */}
       <main className="flex-1 overflow-y-auto">
 
-        {/* Header */}
         <header className="sticky top-0 z-10 bg-white/90 backdrop-blur-md px-10 py-6 border-b border-slate-200">
           <div className="flex items-center justify-between">
             <div>
@@ -328,22 +329,18 @@ export function CrearCursoWizard() {
         </header>
 
         <div className="px-10 py-8">
-          {/* Stepper */}
           <Stepper pasoActual={wizard.pasoActual} />
 
-          {/* Error global (al publicar) */}
           {wizard.errorGuardado && (
             <div className="max-w-4xl mx-auto mb-6 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
               {wizard.errorGuardado}
             </div>
           )}
 
-          {/* Paso activo */}
           {renderPaso()}
         </div>
       </main>
 
-      {/* Bloqueo móvil */}
       <div className="hidden max-[1365px]:fixed max-[1365px]:inset-0 max-[1365px]:bg-jc-blue max-[1365px]:flex flex-col items-center justify-center p-8 text-center z-[100]">
         <h2 className="text-3xl font-bold text-white mb-4">Computador Requerido</h2>
         <p className="text-blue-100">La creación de cursos requiere pantalla de escritorio.</p>
@@ -351,4 +348,3 @@ export function CrearCursoWizard() {
     </div>
   );
 }
-
