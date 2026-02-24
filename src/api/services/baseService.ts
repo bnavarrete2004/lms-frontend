@@ -39,29 +39,6 @@ export interface ServiceConfig {
 // CLASE BASE SERVICE
 // ============================================
 
-/**
- * Servicio base genérico para operaciones CRUD
- * 
- * @example
- * ```typescript
- * const cursoService = new BaseService<Curso>({ endpoint: '/cursos' });
- * 
- * // Listar todos
- * const cursos = await cursoService.getAll();
- * 
- * // Obtener uno
- * const curso = await cursoService.getById(1);
- * 
- * // Crear
- * const nuevoCurso = await cursoService.create({ nombre: 'React Avanzado' });
- * 
- * // Actualizar
- * const actualizado = await cursoService.update(1, { nombre: 'React Pro' });
- * 
- * // Eliminar
- * await cursoService.delete(1);
- * ```
- */
 export class BaseService<T> {
   protected endpoint: string;
   protected resourceName: string;
@@ -71,23 +48,24 @@ export class BaseService<T> {
     this.resourceName = config.resourceName || config.endpoint.replace(/^\//, '');
   }
 
+  /**
+   * Método privado para limpiar la URL base y evitar doble barra //
+   * No modifica la variable original this.endpoint
+   */
+  private getBaseUrl(): string {
+    return this.endpoint.endsWith('/') ? this.endpoint.slice(0, -1) : this.endpoint;
+  }
+
   // ============================================
   // GET ALL (LIST)
   // ============================================
 
-  /**
-   * Obtiene una lista de recursos
-   * 
-   * @param params - Parámetros de query (filtros, paginación, ordering)
-   * @returns Array de recursos o respuesta paginada
-   */
   async getAll(params?: Record<string, any>): Promise<T[]> {
     const response: AxiosResponse<T[] | PaginatedResponse<T>> = await api.get(
       this.endpoint,
       { params }
     );
 
-    // Si el backend usa paginación, extraer los resultados
     if (this.isPaginatedResponse(response.data)) {
       return response.data.results;
     }
@@ -95,12 +73,6 @@ export class BaseService<T> {
     return response.data;
   }
 
-  /**
-   * Obtiene una lista paginada de recursos
-   * 
-   * @param params - Parámetros de paginación
-   * @returns Respuesta paginada completa con metadatos
-   */
   async getPaginated(params?: PaginationParams): Promise<PaginatedResponse<T>> {
     const response: AxiosResponse<PaginatedResponse<T>> = await api.get(
       this.endpoint,
@@ -114,14 +86,8 @@ export class BaseService<T> {
   // GET BY ID
   // ============================================
 
-  /**
-   * Obtiene un recurso específico por ID
-   * 
-   * @param id - ID del recurso
-   * @returns Recurso encontrado
-   */
   async getById(id: number | string): Promise<T> {
-    const base = this.endpoint.endsWith('/') ? this.endpoint.slice(0, -1) : this.endpoint;
+    const base = this.getBaseUrl();
     const response: AxiosResponse<T> = await api.get(`${base}/${id}/`);
     return response.data;
   }
@@ -130,12 +96,6 @@ export class BaseService<T> {
   // CREATE
   // ============================================
 
-  /**
-   * Crea un nuevo recurso
-   * 
-   * @param data - Datos del recurso a crear
-   * @returns Recurso creado
-   */
   async create(data: Partial<T>): Promise<T> {
     const response: AxiosResponse<T> = await api.post(this.endpoint, data);
     return response.data;
@@ -145,15 +105,8 @@ export class BaseService<T> {
   // UPDATE (PUT - completo)
   // ============================================
 
-  /**
-   * Actualiza completamente un recurso (PUT)
-   * 
-   * @param id - ID del recurso
-   * @param data - Datos completos del recurso
-   * @returns Recurso actualizado
-   */
   async update(id: number | string, data: Partial<T>): Promise<T> {
-    const base = this.endpoint.endsWith('/') ? this.endpoint.slice(0, -1) : this.endpoint;
+    const base = this.getBaseUrl();
     const response: AxiosResponse<T> = await api.put(`${base}/${id}/`, data);
     return response.data;
   }
@@ -162,15 +115,8 @@ export class BaseService<T> {
   // PATCH (parcial)
   // ============================================
 
-  /**
-   * Actualiza parcialmente un recurso (PATCH)
-   * 
-   * @param id - ID del recurso
-   * @param data - Datos parciales a actualizar
-   * @returns Recurso actualizado
-   */
   async patch(id: number | string, data: Partial<T>): Promise<T> {
-   const base = this.endpoint.endsWith('/') ? this.endpoint.slice(0, -1) : this.endpoint;
+    const base = this.getBaseUrl();
     const response: AxiosResponse<T> = await api.patch(`${base}/${id}/`, data);
     return response.data;
   }
@@ -179,61 +125,42 @@ export class BaseService<T> {
   // DELETE
   // ============================================
 
-  /**
-   * Elimina un recurso
-   * 
-   * @param id - ID del recurso a eliminar
-   */
   async delete(id: number | string): Promise<void> {
-    const base = this.endpoint.endsWith('/') ? this.endpoint.slice(0, -1) : this.endpoint;
+    const base = this.getBaseUrl();
     await api.delete(`${base}/${id}/`);
   }
 
   // ============================================
-  // CUSTOM ACTIONS (para endpoints tipo /recurso/{id}/action/)
+  // CUSTOM ACTIONS
   // ============================================
 
   /**
-   * Ejecuta una acción personalizada sobre un recurso
-   * 
-   * @param id - ID del recurso
-   * @param action - Nombre de la acción (ej: 'aprobar', 'rechazar')
-   * @param data - Datos opcionales para la acción
-   * @returns Respuesta de la acción
-   * 
-   * @example
-   * ```typescript
-   * await materialService.customAction(5, 'aprobar', { comentarios: 'Excelente' });
-   * // POST /api/materiales/5/aprobar/ { comentarios: 'Excelente' }
-   * ```
+   * Ejecuta una acción POST personalizada (Ej: asignar_estudiantes)
    */
   async customAction<R = T>(
     id: number | string,
     action: string,
     data?: any
   ): Promise<R> {
+    const base = this.getBaseUrl();
     const response: AxiosResponse<R> = await api.post(
-      `${this.endpoint}/${id}/${action}/`,
+      `${base}/${id}/${action}/`,
       data
     );
     return response.data;
   }
 
   /**
-   * Ejecuta una acción GET personalizada sobre un recurso
-   * 
-   * @param id - ID del recurso
-   * @param action - Nombre de la acción
-   * @param params - Parámetros de query
-   * @returns Respuesta de la acción
+   * Ejecuta una acción GET personalizada
    */
   async customGetAction<R = T>(
     id: number | string,
     action: string,
     params?: any
   ): Promise<R> {
+    const base = this.getBaseUrl();
     const response: AxiosResponse<R> = await api.get(
-      `${this.endpoint}/${id}/${action}/`,
+      `${base}/${id}/${action}/`,
       { params }
     );
     return response.data;
@@ -243,23 +170,10 @@ export class BaseService<T> {
   // BÚSQUEDA Y FILTROS
   // ============================================
 
-  /**
-   * Busca recursos por un término
-   * 
-   * @param query - Término de búsqueda
-   * @param params - Parámetros adicionales
-   * @returns Array de recursos encontrados
-   */
   async search(query: string, params?: Record<string, any>): Promise<T[]> {
     return this.getAll({ search: query, ...params });
   }
 
-  /**
-   * Filtra recursos por múltiples criterios
-   * 
-   * @param filters - Objeto con filtros
-   * @returns Array de recursos filtrados
-   */
   async filter(filters: Record<string, any>): Promise<T[]> {
     return this.getAll(filters);
   }
@@ -268,9 +182,6 @@ export class BaseService<T> {
   // HELPERS
   // ============================================
 
-  /**
-   * Verifica si la respuesta es paginada
-   */
   private isPaginatedResponse(data: any): data is PaginatedResponse<T> {
     return (
       data &&
@@ -280,9 +191,5 @@ export class BaseService<T> {
     );
   }
 }
-
-// ============================================
-// EXPORT
-// ============================================
 
 export default BaseService;

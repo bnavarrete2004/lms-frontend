@@ -189,23 +189,62 @@ function WizardSidebar({
   );
 }
 
+// ── Modal confirmación cancelar ───────────────────────────────────────────────
+
+function ModalConfirmarCancelar({ onConfirmar, onCerrar }: {
+  onConfirmar: () => void;
+  onCerrar: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+          </div>
+          <h3 className="font-bold text-slate-800">¿Cancelar la creación?</h3>
+        </div>
+        <p className="text-sm text-slate-500 mb-6">
+          Se perderá todo el progreso del wizard. Esta acción no se puede deshacer.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onCerrar}
+            className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-semibold text-sm hover:bg-slate-200 transition"
+          >
+            Seguir editando
+          </button>
+          <button
+            onClick={onConfirmar}
+            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-semibold text-sm hover:bg-red-700 transition"
+          >
+            Sí, cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Contenedor principal ──────────────────────────────────────────────────────
 
 export function CrearCursoWizard() {
-  const navigate     = useNavigate();
+  const navigate         = useNavigate();
   const { user, logout } = useAuth();
-  const wizard       = useCursoWizard();
+  const wizard           = useCursoWizard();
 
-  // ── Estado de asignaciones (paso 4) ──
-  // Vive aquí para persistir al navegar entre pasos
-  const [asignaciones, setAsignaciones] = useState<AsignacionLocal[]>([]);
+  const [asignaciones, setAsignaciones]           = useState<AsignacionLocal[]>([]);
+  const [confirmandoCancelar, setConfirmandoCancelar] = useState(false);
 
-  const handleCancelar = () => {
-    if (window.confirm('¿Estás seguro de cancelar? Se perderá todo el progreso.')) {
-      wizard.resetWizard();
-      setAsignaciones([]);
-      navigate('/admin/cursos');
-    }
+  // Sin window.confirm — abre modal inline
+  const handleCancelar = () => setConfirmandoCancelar(true);
+
+  const handleConfirmarCancelar = () => {
+    wizard.resetWizard();
+    setAsignaciones([]);
+    navigate('/admin/cursos');
   };
 
   const handleLogout = () => {
@@ -340,6 +379,14 @@ export function CrearCursoWizard() {
           {renderPaso()}
         </div>
       </main>
+
+      {/* Modal confirmación cancelar — sin window.confirm */}
+      {confirmandoCancelar && (
+        <ModalConfirmarCancelar
+          onConfirmar={handleConfirmarCancelar}
+          onCerrar={() => setConfirmandoCancelar(false)}
+        />
+      )}
 
       <div className="hidden max-[1365px]:fixed max-[1365px]:inset-0 max-[1365px]:bg-jc-blue max-[1365px]:flex flex-col items-center justify-center p-8 text-center z-[100]">
         <h2 className="text-3xl font-bold text-white mb-4">Computador Requerido</h2>

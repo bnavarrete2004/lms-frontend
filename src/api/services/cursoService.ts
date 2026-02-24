@@ -52,6 +52,10 @@ class CursoService extends BaseService<Curso> {
   async getActivos() {
     return this.filter({ estado: 'activo' });
   }
+  async asignarEstudiantes(cursoId: number, payload: { usuario_id?: number; codigo_empleado?: string }) {
+  return this.customAction(cursoId, 'asignar_estudiantes', payload);
 }
+}
+
 
 export const cursoService = new CursoService();
