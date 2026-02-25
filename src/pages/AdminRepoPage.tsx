@@ -275,7 +275,7 @@ export function AdminRepoPage() {
                                         </button>
 
                                         {/* Botón Maquetar */}
-                                        {m.estado === 'en_diseno' && (
+                                        {m.estado === 'en_diseno' && m.tipo !== 'video' && m.tipo !== 'scorm' &&  (
                                             <button 
                                                 onClick={() => setMaterialParaDiseno(m)}
                                                 className="px-3 py-1 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition flex items-center gap-1.5 shadow-sm"
