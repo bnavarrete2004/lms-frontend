@@ -8,7 +8,8 @@ export interface Material {
   id: number;
   nombre: string;
   descripcion: string;
-  tipo: 'video' | 'documento' | 'presentacion' | 'imagen' | 'audio' | 'codigo' | 'enlace' | 'otro';
+  tipo: 'video' | 'pdf' | 'documento' | 'presentacion' | 'imagen' | 'audio' | 'codigo' | 'enlace' | 'scorm' | 'otro';
+  preguntas?: any[];
   archivo_url: string;
   archivo_size?: number;
   archivo_hash?: string;
