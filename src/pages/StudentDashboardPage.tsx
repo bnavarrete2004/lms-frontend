@@ -154,12 +154,14 @@ export function DashboardPage() {
             <div className="h-72 bg-slate-200 animate-pulse rounded-2xl" />
           ) : cursoEnProgreso ? (
             <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 h-72 flex items-center shadow-xl group">
-              <img 
-                src={cursoEnProgreso.curso_data?.imagen_portada || "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=1200"} 
-                className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700" 
-                alt="Curso"
-              />
-              <div className="relative z-10 p-8 md:p-12 max-w-2xl">
+                  {cursoEnProgreso.curso_data?.imagen_portada && (
+                    <img
+                      src={cursoEnProgreso.curso_data.imagen_portada}
+                      className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700"
+                      alt="Curso"
+                    />
+                  )}
+                  <div className="relative z-10 p-8 md:p-12 max-w-2xl">
                 <Badge variant="calipso" className="mb-4 animate-pulse">
                   En Progreso
                 </Badge>
@@ -223,7 +225,7 @@ export function DashboardPage() {
                   <CourseCard
                     key={inscripcion.id}
                     title={inscripcion.curso_data?.nombre || 'Sin título'}
-                    image={inscripcion.curso_data?.imagen_portada || 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=500'}
+                    image={inscripcion.curso_data?.imagen_portada || ''}
                     senceId={inscripcion.curso_data?.codigo_sence_data?.codigo}
                     duration={`${inscripcion.curso_data?.horas_totales || 0} Horas lectivas`}
                     progress={inscripcion.porcentaje_avance || 0}

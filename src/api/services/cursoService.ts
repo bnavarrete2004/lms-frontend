@@ -26,6 +26,15 @@ export interface Modulo {
   updated_at?: string;
 }
 
+export interface RelatorCurso {
+  id: number;
+  relator: number;
+  relator_nombre?: string;       // SerializerMethodField del backend
+  nombre_completo?: string;      // por si viene con otro nombre
+  fecha_asignacion?: string;
+  es_principal?: boolean;
+}
+
 export interface Curso {
   id: number;
   codigo_sence: number;
@@ -37,6 +46,10 @@ export interface Curso {
   nivel: 'basico' | 'intermedio' | 'avanzado';
   estado: 'activo' | 'inactivo' | 'borrador';
   imagen_portada?: string;  // ← Corregido de imagen_url
+  imagen_banner?: string;
+  fecha_inicio?: string;         // ← agregado
+  fecha_fin?: string;            // ← agregado
+  relatores?: RelatorCurso[];    // ← agregado (Many-to-Many via CursoRelator)
   total_inscritos?: number;
   cupos_disponibles?: number;
   modulos?: Modulo[];

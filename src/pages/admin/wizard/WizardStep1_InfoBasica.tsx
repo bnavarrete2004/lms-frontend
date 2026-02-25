@@ -162,9 +162,9 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
   // ── Handlers ───────────────────────────────────────────────────────────────
 
   function handleRelatores(e: React.ChangeEvent<HTMLSelectElement>) {
-    const seleccionados = Array.from(e.target.selectedOptions).map(o => Number(o.value));
-    onChange({ relatores: seleccionados });
-  }
+  const seleccionados = Array.from(e.target.selectedOptions).map(o => Number(o.value));
+  onChange({ relatores: seleccionados });
+  } 
 
   function handleImagen(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -313,7 +313,7 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
               <option disabled>Cargando relatores...</option>
             ) : (
               relatores.map(r => (
-                <option key={r.id} value={r.id}>
+                <option key={r.id} value={r.usuario_data?.id}>
                   {r.usuario_data?.nombre_completo ?? `Relator #${r.id}`}
                   {r.especialidad ? ` — ${r.especialidad}` : ''}
                 </option>

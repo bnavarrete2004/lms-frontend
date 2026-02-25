@@ -392,7 +392,11 @@ export function CourseDetailPage() {
               </div>
               <div>
                 <p className="text-xs text-slate-500">Fecha límite</p>
-                <p className="text-sm font-bold text-slate-800">31 Enero 2026</p>
+                <p className="text-sm font-bold text-slate-800">
+                  {curso.fecha_fin
+                    ? new Date(curso.fecha_fin).toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' })
+                    : 'Sin fecha límite'}
+                </p>
               </div>
             </div>
 
@@ -404,7 +408,11 @@ export function CourseDetailPage() {
               </div>
               <div>
                 <p className="text-xs text-slate-500">Relator</p>
-                <p className="text-sm font-bold text-slate-800">Relator Asignado</p>
+                <p className="text-sm font-bold text-slate-800">
+                    {curso.relatores && curso.relatores.length > 0
+                      ? curso.relatores.map(r => r.relator_nombre || r.nombre_completo || 'Relator').join(', ')
+                      : 'No asignado'}
+                  </p>
               </div>
             </div>
           </div>

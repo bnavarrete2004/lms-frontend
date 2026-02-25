@@ -294,6 +294,43 @@ export function useCursoWizard() {
       // Por ahora se envía sin imagen — agregar soporte multipart en iteración siguiente.
       const cursoCreado: Curso = await cursoService.create(cursoCreadoPayload);
 
+      // 1b. Asignar relatores al curso
+      if (curso.relatores && curso.relatores.length > 0) {
+        for (const relatorId of curso.relatores) {
+          try {
+            await api.post('/curso-relator/', {
+              curso: cursoCreado.id,
+              relator: relatorId,  // ← este es el ID correcto
+              activo: true,
+            });
+          } catch (err) {
+            console.warn(`No se pudo asignar relator ${relatorId}:`, err);
+          }
+        }
+      }
+
+      // 1c. Subir imagen de portada si existe
+      if (curso.imagen_portada instanceof File) {
+        try {
+          const formData = new FormData();
+          formData.append('file', curso.imagen_portada);
+          formData.append('nombre', `Portada - ${curso.nombre}`);
+          formData.append('tipo', 'imagen');
+          const uploadResp = await api.post('/upload/material/', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+          const imageUrl = uploadResp.data?.material?.archivo_url
+                        || uploadResp.data?.cloudinary?.url;
+          if (imageUrl) {
+            await cursoService.update(cursoCreado.id, { imagen_portada: imageUrl } as any);
+          }
+        } catch (err) {
+          console.warn('No se pudo subir la imagen de portada:', err);
+        }
+      }
+
+      // 2. Crear módulos en orden y guardar mapa localId → id real
+
       // 2. Crear módulos en orden y guardar mapa localId → id real
       const mapaModulos: Record<string, number> = {};
 
