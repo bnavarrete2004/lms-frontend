@@ -129,37 +129,38 @@ function PreviewModal({ material, onClose }: { material: Material; onClose: () =
       }
 
       // ── PRESENTACIÓN ──
-      case 'presentacion': {
-        if (!material.archivo_url) {
-          return (
-            <div className="flex flex-col items-center justify-center h-64 gap-3 text-slate-400">
-              <ClipboardList size={48} className="opacity-30" />
-              <p className="text-sm">No hay archivo disponible</p>
-            </div>
-          );
-        }
-        // Google Docs Viewer para PPTX
+      case 'presentacion':
+      case 'documento': {
+        // Mejoramos la URL del visor de Google. A veces requiere que la URL sea absoluta y limpia.
         const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(material.archivo_url)}&embedded=true`;
         return (
-          <div className="w-full rounded-xl overflow-hidden border border-slate-200">
-            <iframe
-              src={viewerUrl}
-              className="w-full"
-              style={{ height: '70vh' }}
-              title={material.nombre}
-            />
+          <div className="w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+            <iframe src={viewerUrl} className="w-full" style={{ height: '70vh' }} frameBorder="0" />
+            <div className="p-2 text-center">
+               <a href={material.archivo_url} target="_blank" className="text-xs text-jc-blue underline">Si no visualiza el archivo, haga click aquí para descargar</a>
+            </div>
           </div>
         );
       }
 
+
       // ── QUIZ / SCORM ──
       case 'scorm': {
-        const preguntas = material.preguntas || [];
+        // CORRECCIÓN: Parsear preguntas si llegan como string
+        let preguntas: any[] = [];
+        try {
+          preguntas = typeof material.preguntas === 'string' 
+            ? JSON.parse(material.preguntas) 
+            : (material.preguntas || []);
+        } catch (e) {
+          preguntas = [];
+        }
+
         if (preguntas.length === 0) {
           return (
             <div className="flex flex-col items-center justify-center h-48 gap-3 text-slate-400">
               <CheckCircle2 size={48} className="opacity-30" />
-              <p className="text-sm">Este quiz no tiene preguntas cargadas</p>
+              <p className="text-sm">Este quiz no tiene preguntas cargadas en la base de datos.</p>
             </div>
           );
         }
@@ -192,7 +193,7 @@ function PreviewModal({ material, onClose }: { material: Material; onClose: () =
 
             {/* Opciones */}
             <div className="space-y-2">
-              {p.opciones.map((opcion, oidx) => {
+              {p.opciones.map((opcion: string, oidx: number) => {
                 const esCorrecta = p.respuesta_correcta === oidx;
                 const etiqueta = p.tipo === 'verdadero_falso'
                   ? (oidx === 0 ? 'V' : 'F')
