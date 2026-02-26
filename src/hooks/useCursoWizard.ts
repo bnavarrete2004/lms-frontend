@@ -322,7 +322,7 @@ export function useCursoWizard() {
           const imageUrl = uploadResp.data?.material?.archivo_url
                         || uploadResp.data?.cloudinary?.url;
           if (imageUrl) {
-            await cursoService.update(cursoCreado.id, { imagen_portada: imageUrl } as any);
+            await api.patch(`/cursos/${cursoCreado.id}/`, { imagen_portada: imageUrl });
           }
         } catch (err) {
           console.warn('No se pudo subir la imagen de portada:', err);

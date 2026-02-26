@@ -1,5 +1,10 @@
 // src/pages/LessonPage.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -40,9 +45,7 @@ function getYoutubeEmbedUrl(url: string): string | null {
   return match ? `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1` : null;
 }
 
-function getGoogleDocsViewerUrl(url: string): string {
-  return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-}
+
 
 // ── Página principal ──────────────────────────────────────────────────────────
 
@@ -385,21 +388,96 @@ function VideoStep({ step, onNext, onBack }: any) {
 // ── PDF ───────────────────────────────────────────────────────────────────────
 
 function PdfStep({ step, onNext, onBack }: any) {
+  const [numPages, setNumPages]       = useState<number | null>(null);
+  const [pageNumber, setPageNumber]   = useState(1);
+  const [containerWidth, setContainerWidth] = useState(800);
+  const [loadError, setLoadError]     = useState(false);
+  const containerRef                  = useCallback((node: HTMLDivElement | null) => {
+    if (node) setContainerWidth(node.clientWidth - 48);
+  }, []);
+
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setPageNumber(1);
+  };
+
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+
+        {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <FileText size={16} className="text-blue-600" />
             <span className="font-semibold text-slate-700 text-sm">{step.title}</span>
+            {numPages && (
+              <span className="text-xs text-slate-400">— {numPages} páginas</span>
+            )}
           </div>
           <a href={step.data.url} target="_blank" rel="noreferrer"
             className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition">
-            <ExternalLink size={12} /> Abrir original
+            <ExternalLink size={12} /> Descargar PDF
           </a>
         </div>
-        <iframe src={getGoogleDocsViewerUrl(step.data.url)} className="w-full border-0" style={{ height: '70vh' }} title={step.title} />
+
+        {/* Visor */}
+        <div ref={containerRef} className="px-6 py-4 bg-slate-50 flex flex-col items-center min-h-[70vh]">
+          {loadError ? (
+            <div className="flex flex-col items-center justify-center h-64 text-slate-400 gap-4">
+              <FileText size={48} className="opacity-30" />
+              <p className="text-sm italic">No se pudo cargar el PDF.</p>
+              <a href={step.data.url} target="_blank" rel="noreferrer"
+                className="flex items-center gap-2 px-4 py-2 bg-jc-blue text-white rounded-lg text-sm font-semibold hover:opacity-90 transition">
+                <ExternalLink size={14} /> Abrir en nueva pestaña
+              </a>
+            </div>
+          ) : (
+            <Document
+              file={step.data.url}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={() => setLoadError(true)}
+              loading={
+                <div className="flex items-center gap-3 py-20 text-slate-400">
+                  <div className="w-5 h-5 border-2 border-jc-blue border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm">Cargando PDF...</span>
+                </div>
+              }
+            >
+              <Page
+                pageNumber={pageNumber}
+                width={containerWidth}
+                renderTextLayer={true}
+                renderAnnotationLayer={true}
+                className="shadow-lg rounded-lg overflow-hidden"
+              />
+            </Document>
+          )}
+        </div>
+
+        {/* Paginación */}
+        {numPages && numPages > 1 && (
+          <div className="flex items-center justify-center gap-4 px-6 py-3 border-t border-slate-100">
+            <button
+              onClick={() => setPageNumber(p => Math.max(1, p - 1))}
+              disabled={pageNumber <= 1}
+              className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-semibold disabled:opacity-40 hover:bg-slate-200 transition"
+            >
+              <ChevronLeft size={15} /> Anterior
+            </button>
+            <span className="text-sm font-semibold text-slate-600">
+              Página {pageNumber} de {numPages}
+            </span>
+            <button
+              onClick={() => setPageNumber(p => Math.min(numPages, p + 1))}
+              disabled={pageNumber >= numPages}
+              className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-semibold disabled:opacity-40 hover:bg-slate-200 transition"
+            >
+              Siguiente <ChevronRight size={15} />
+            </button>
+          </div>
+        )}
       </div>
+
       <NavBar title="" subtitle="" onBack={onBack} onNext={onNext} labelNext="Marcar como leído y continuar" />
     </div>
   );
@@ -418,11 +496,25 @@ function PresentacionStep({ step, onNext, onBack }: any) {
             <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Presentación</span>
           </div>
           <a href={step.data.url} target="_blank" rel="noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition">
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-semibold hover:bg-amber-200 transition">
             <ExternalLink size={12} /> Descargar PPTX
           </a>
         </div>
-        <iframe src={getGoogleDocsViewerUrl(step.data.url)} className="w-full border-0" style={{ height: '70vh' }} title={step.title} />
+        <div className="flex flex-col items-center justify-center py-20 px-8 text-center bg-slate-50 gap-6">
+          <div className="w-20 h-20 bg-amber-100 rounded-2xl flex items-center justify-center">
+            <Presentation size={40} className="text-amber-500" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">{step.title}</h3>
+            <p className="text-sm text-slate-500 max-w-md">
+              Descarga la presentación para verla en tu dispositivo con PowerPoint o cualquier visor compatible.
+            </p>
+          </div>
+          <a href={step.data.url} target="_blank" rel="noreferrer"
+            className="flex items-center gap-2 px-8 py-3 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 transition shadow-md">
+            <ExternalLink size={18} /> Descargar Presentación
+          </a>
+        </div>
       </div>
       <NavBar title="" subtitle="" onBack={onBack} onNext={onNext} labelNext="Continuar" />
     </div>

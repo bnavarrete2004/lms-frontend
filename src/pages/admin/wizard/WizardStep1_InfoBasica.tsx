@@ -1,8 +1,8 @@
 // src/pages/admin/wizard/WizardStep1_InfoBasica.tsx
 // Paso 1: Información básica del curso con validación de carga horaria.
 
-import { useState, useRef, useEffect } from 'react';
-import { X, ImageIcon, ChevronRight } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { X, ImageIcon, ChevronRight, Search, UserPlus } from 'lucide-react';
 import type { DatosCurso } from '@/hooks/useCursoWizard';
 
 // ── Tipos locales ─────────────────────────────────────────────────────────────
@@ -24,14 +24,11 @@ interface ErroresForm {
   ciudad?: string;
 }
 
-interface PerfilRelator {
-  id: number;
-  usuario_data: {
-    id: number;
-    nombre_completo: string;
-    email: string;
-  };
-  especialidad: string;
+interface RelatorResultado {
+  id: number;              // ID del Usuario (lo que necesita CursoRelator)
+  nombre_completo: string;
+  rut_completo?: string;
+  email?: string;
 }
 
 interface CodigoSence {
@@ -56,54 +53,77 @@ function inputCls(error?: string) {
 
 export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancelar }: Props) {
   const [errores, setErrores]           = useState<ErroresForm>({});
-  const [relatores, setRelatores]       = useState<PerfilRelator[]>([]);
   const [codigosSence, setCodigosSence] = useState<CodigoSence[]>([]);
-  const [loadingRelatores, setLoadingRelatores] = useState(false);
-  const [loadingSence, setLoadingSence]         = useState(false);
-  const imageInputRef   = useRef<HTMLInputElement>(null);
+  const [loadingSence, setLoadingSence] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Cargar relatores y códigos SENCE al montar ─────────────────────────────
+  // Estado del buscador de relatores
+  const [todosRelatores, setTodosRelatores]     = useState<RelatorResultado[]>([]);
+  const [busquedaRelator, setBusquedaRelator]   = useState('');
+  const [relatoresAsignados, setRelatoresAsignados] = useState<RelatorResultado[]>([]);
+
+  // ── Cargar datos al montar ─────────────────────────────────────────────────
 
   useEffect(() => {
-    async function cargarDatos() {
-      const token = localStorage.getItem('access_token');
-      const headers = { Authorization: `Bearer ${token}` };
+    const token = localStorage.getItem('access_token');
+    const headers = { Authorization: `Bearer ${token}` };
 
-      try {
-        setLoadingRelatores(true);
-        const res = await fetch('/api/perfiles-relator/', { headers });
-        const data = await res.json();
-        if (res.ok) {
-          setRelatores(Array.isArray(data) ? data : (data.results ?? []));
-        }
-      } catch (err) {
-        console.error('❌ Error relatores:', err);
-      } finally {
-        setLoadingRelatores(false);
-      }
+    // Cargar usuarios con tipo relator
+    fetch('/api/usuarios/?tipo_usuario=relator', { headers })
+      .then(r => r.json())
+      .then(data => {
+        const lista = Array.isArray(data) ? data : (data.results ?? []);
+        setTodosRelatores(lista.map((u: any) => ({
+          id: u.id,
+          nombre_completo: u.nombre_completo || `${u.nombre} ${u.apellido}`,
+          rut_completo: u.rut_completo || u.rut,
+          email: u.email,
+        })));
+      })
+      .catch(err => console.error('❌ Error relatores:', err));
 
-      try {
-        setLoadingSence(true);
-        const res = await fetch('/api/codigos-sence/', { headers });
-        if (res.ok) {
-          const data = await res.json();
-          setCodigosSence(Array.isArray(data) ? data : (data.results ?? []));
-        }
-      } catch (err) {
-        console.error('❌ Error SENCE:', err);
-      } finally {
-        setLoadingSence(false);
-      }
-    }
-    cargarDatos();
+    // Cargar códigos SENCE
+    setLoadingSence(true);
+    fetch('/api/codigos-sence/', { headers })
+      .then(r => r.json())
+      .then(data => setCodigosSence(Array.isArray(data) ? data : (data.results ?? [])))
+      .catch(err => console.error('❌ Error SENCE:', err))
+      .finally(() => setLoadingSence(false));
   }, []);
 
-  // ── Validación ──────────────────────────────────────────────────────────────
+  // ── Buscador de relatores ──────────────────────────────────────────────────
+
+  const resultadosBusqueda = useMemo(() => {
+    if (busquedaRelator.length < 2) return [];
+    const q = busquedaRelator.toLowerCase();
+    return todosRelatores
+      .filter(r =>
+        !relatoresAsignados.find(a => a.id === r.id) && // no mostrar ya asignados
+        (r.nombre_completo.toLowerCase().includes(q) ||
+         (r.rut_completo || '').includes(q) ||
+         (r.email || '').toLowerCase().includes(q))
+      )
+      .slice(0, 5);
+  }, [busquedaRelator, todosRelatores, relatoresAsignados]);
+
+  const agregarRelator = (relator: RelatorResultado) => {
+    const nuevos = [...relatoresAsignados, relator];
+    setRelatoresAsignados(nuevos);
+    onChange({ relatores: nuevos.map(r => r.id) });
+    setBusquedaRelator('');
+  };
+
+  const quitarRelator = (id: number) => {
+    const nuevos = relatoresAsignados.filter(r => r.id !== id);
+    setRelatoresAsignados(nuevos);
+    onChange({ relatores: nuevos.map(r => r.id) });
+  };
+
+  // ── Validación ─────────────────────────────────────────────────────────────
 
   function validar(): boolean {
     const e: ErroresForm = {};
 
-    // Validaciones de texto
     if (!datos.nombre.trim())
       e.nombre = 'El nombre del curso es obligatorio.';
     else if (datos.nombre.trim().length < 5)
@@ -112,12 +132,9 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
     if (!datos.descripcion.trim())
       e.descripcion = 'La descripción es obligatoria.';
 
-    // Validaciones numéricas
-    if (datos.horas_totales === '' || Number(datos.horas_totales) < 1) {
+    if (datos.horas_totales === '' || Number(datos.horas_totales) < 1)
       e.horas_totales = 'Las horas totales deben ser al menos 1.';
-    }
 
-    // Validaciones de fechas
     if (!datos.fecha_inicio)
       e.fecha_inicio = 'La fecha de inicio es obligatoria.';
 
@@ -127,22 +144,13 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
       e.fecha_fin = 'La fecha de fin debe ser posterior a la de inicio.';
     }
 
-    // ── Lógica de Factibilidad Temporal (Horas vs Días) ──
     if (datos.fecha_inicio && datos.fecha_fin && datos.horas_totales !== '') {
       const inicio = new Date(datos.fecha_inicio);
-      const fin = new Date(datos.fecha_fin);
-      
-      // Calcular diferencia en días (incluyendo el día de inicio)
-      const diffTime = fin.getTime() - inicio.getTime();
-      const dias = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-      
-      if (dias > 0) {
-        const horasPorDia = Number(datos.horas_totales) / dias;
-        // Si el curso exige más de 12 horas diarias, es pedagógicamente imposible
-        if (horasPorDia > 12) {
-          e.fecha_fin = `Carga horaria imposible: ${horasPorDia.toFixed(1)}h/día. El máximo permitido son 12h diarias.`;
-        }
-      }
+      const fin    = new Date(datos.fecha_fin);
+      const dias   = Math.ceil((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      const horasPorDia = Number(datos.horas_totales) / dias;
+      if (horasPorDia > 12)
+        e.fecha_fin = `Carga horaria imposible: ${horasPorDia.toFixed(1)}h/día. El máximo son 12h diarias.`;
     }
 
     if (datos.relatores.length === 0)
@@ -159,12 +167,7 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
     if (validar()) onSiguiente();
   }
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
-
-  function handleRelatores(e: React.ChangeEvent<HTMLSelectElement>) {
-  const seleccionados = Array.from(e.target.selectedOptions).map(o => Number(o.value));
-  onChange({ relatores: seleccionados });
-  } 
+  // ── Imagen ─────────────────────────────────────────────────────────────────
 
   function handleImagen(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -179,7 +182,7 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
     if (imageInputRef.current) imageInputRef.current.value = '';
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -197,11 +200,10 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
             className={inputCls(errores.nombre)}
             placeholder="Ej: Normativa Sanitaria y Calidad Alimentaria (HACCP)"
           />
-          {errores.nombre ? (
-            <p className="text-xs text-red-500 mt-1">{errores.nombre}</p>
-          ) : (
-            <p className="text-xs text-slate-500 mt-1">Este nombre será visible para los estudiantes</p>
-          )}
+          {errores.nombre
+            ? <p className="text-xs text-red-500 mt-1">{errores.nombre}</p>
+            : <p className="text-xs text-slate-500 mt-1">Este nombre será visible para los estudiantes</p>
+          }
         </div>
 
         {/* Descripción */}
@@ -216,9 +218,7 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
             className={inputCls(errores.descripcion) + ' resize-none'}
             placeholder="Describe los objetivos y contenidos principales del curso..."
           />
-          {errores.descripcion && (
-            <p className="text-xs text-red-500 mt-1">{errores.descripcion}</p>
-          )}
+          {errores.descripcion && <p className="text-xs text-red-500 mt-1">{errores.descripcion}</p>}
         </div>
 
         {/* Código SENCE + Horas */}
@@ -241,7 +241,7 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
               ))}
             </select>
             <p className="text-xs text-slate-500 mt-1">
-              {loadingSence ? 'Cargando códigos...' : 'Opcional - Solo si aplica'}
+              {loadingSence ? 'Cargando códigos...' : 'Opcional — Solo si aplica'}
             </p>
           </div>
           <div>
@@ -256,19 +256,18 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
               className={inputCls(errores.horas_totales)}
               placeholder="Ej: 24"
             />
-            {errores.horas_totales ? (
-              <p className="text-xs text-red-500 mt-1">{errores.horas_totales}</p>
-            ) : (
-              <p className="text-xs text-slate-500 mt-1">Horas lectivas totales</p>
-            )}
+            {errores.horas_totales
+              ? <p className="text-xs text-red-500 mt-1">{errores.horas_totales}</p>
+              : <p className="text-xs text-slate-500 mt-1">Horas lectivas totales</p>
+            }
           </div>
         </div>
 
-        {/* Fecha Inicio + Fecha Fin */}
+        {/* Fechas */}
         <div className="grid grid-cols-2 gap-6 mb-6">
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Fecha Inicio (Default) <span className="text-red-500">*</span>
+              Fecha Inicio <span className="text-red-500">*</span>
             </label>
             <input
               type="date"
@@ -276,13 +275,11 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
               onChange={e => onChange({ fecha_inicio: e.target.value })}
               className={inputCls(errores.fecha_inicio)}
             />
-            {errores.fecha_inicio && (
-              <p className="text-xs text-red-500 mt-1">{errores.fecha_inicio}</p>
-            )}
+            {errores.fecha_inicio && <p className="text-xs text-red-500 mt-1">{errores.fecha_inicio}</p>}
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Fecha Fin (Default) <span className="text-red-500">*</span>
+              Fecha Fin <span className="text-red-500">*</span>
             </label>
             <input
               type="date"
@@ -290,41 +287,73 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
               onChange={e => onChange({ fecha_fin: e.target.value })}
               className={inputCls(errores.fecha_fin)}
             />
-            {errores.fecha_fin && (
-              <p className="text-xs text-red-500 mt-1">{errores.fecha_fin}</p>
-            )}
+            {errores.fecha_fin && <p className="text-xs text-red-500 mt-1">{errores.fecha_fin}</p>}
           </div>
         </div>
 
-        {/* Relatores */}
+        {/* ── Buscador de Relatores ── */}
         <div className="mb-6">
           <label className="block text-sm font-semibold text-slate-700 mb-2">
             Relator(es) Asignados <span className="text-red-500">*</span>
           </label>
-          <select
-            multiple
-            size={4}
-            value={datos.relatores.map(String)}
-            onChange={handleRelatores}
-            className={inputCls(errores.relatores)}
-            disabled={loadingRelatores}
-          >
-            {loadingRelatores ? (
-              <option disabled>Cargando relatores...</option>
-            ) : (
-              relatores.map(r => (
-                <option key={r.id} value={r.usuario_data?.id}>
-                  {r.usuario_data?.nombre_completo ?? `Relator #${r.id}`}
-                  {r.especialidad ? ` — ${r.especialidad}` : ''}
-                </option>
-              ))
-            )}
-          </select>
-          {errores.relatores ? (
-            <p className="text-xs text-red-500 mt-1">{errores.relatores}</p>
-          ) : (
-            <p className="text-xs text-slate-500 mt-1">Mantén Ctrl/Cmd para seleccionar múltiples</p>
+
+          {/* Relatores ya asignados */}
+          {relatoresAsignados.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {relatoresAsignados.map(r => (
+                <div key={r.id} className="flex items-center gap-2 px-3 py-1.5 bg-jc-blue/10 border border-jc-blue/20 text-jc-blue rounded-lg text-sm font-semibold">
+                  <UserPlus size={13} />
+                  <span>{r.nombre_completo}</span>
+                  <button
+                    onClick={() => quitarRelator(r.id)}
+                    className="ml-1 text-jc-blue/60 hover:text-red-500 transition"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
+
+          {/* Input de búsqueda */}
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-3.5 text-slate-400" />
+            <input
+              type="text"
+              value={busquedaRelator}
+              onChange={e => setBusquedaRelator(e.target.value)}
+              className={inputCls(errores.relatores) + ' pl-9'}
+              placeholder="Buscar relator por nombre o RUT..."
+            />
+
+            {/* Dropdown de resultados */}
+            {resultadosBusqueda.length > 0 && (
+              <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden">
+                {resultadosBusqueda.map(r => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => agregarRelator(r)}
+                    className="w-full text-left px-4 py-3 hover:bg-slate-50 text-sm border-b last:border-0 flex flex-col transition"
+                  >
+                    <span className="font-bold text-slate-700">{r.nombre_completo}</span>
+                    <span className="text-xs text-slate-400">{r.rut_completo || r.email || ''}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {busquedaRelator.length >= 2 && resultadosBusqueda.length === 0 && (
+              <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl px-4 py-3 text-sm text-slate-400 italic">
+                No se encontraron relatores
+              </div>
+            )}
+          </div>
+
+          {errores.relatores
+            ? <p className="text-xs text-red-500 mt-1">{errores.relatores}</p>
+            : <p className="text-xs text-slate-500 mt-1">Escribe al menos 2 caracteres para buscar. Puedes agregar más de uno.</p>
+          }
         </div>
 
         {/* Ciudad */}
@@ -339,15 +368,13 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
             className={inputCls(errores.ciudad)}
             placeholder="Ej: Santiago, Puerto Montt"
           />
-          {errores.ciudad && (
-            <p className="text-xs text-red-500 mt-1">{errores.ciudad}</p>
-          )}
+          {errores.ciudad && <p className="text-xs text-red-500 mt-1">{errores.ciudad}</p>}
         </div>
 
         {/* Imagen Portada */}
         <div className="mb-6">
           <label className="block text-sm font-semibold text-slate-700 mb-2">
-            Imagen de Portada (opcional)
+            Imagen de Portada <span className="text-slate-400 font-normal">(opcional)</span>
           </label>
           {datos.imagen_url ? (
             <div className="relative">
@@ -370,6 +397,7 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
             >
               <ImageIcon size={40} className="text-slate-300 mx-auto mb-3 group-hover:text-jc-calipso transition" />
               <p className="text-sm font-medium text-slate-600">Click para subir imagen</p>
+              <p className="text-xs text-slate-400 mt-1">PNG, JPG — máx 5MB</p>
             </div>
           )}
           <input
@@ -391,7 +419,7 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
           </button>
           <button
             onClick={handleSiguiente}
-            className="inline-flex items-center px-8 py-3 bg-jc-blue text-white rounded-lg font-semibold hover:bg-jc-blue-dark transition shadow-sm"
+            className="inline-flex items-center px-8 py-3 bg-jc-blue text-white rounded-lg font-semibold hover:opacity-90 transition shadow-sm"
           >
             Siguiente: Crear Módulos
             <ChevronRight size={20} className="ml-2" />
