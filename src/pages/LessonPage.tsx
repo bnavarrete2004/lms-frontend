@@ -154,6 +154,10 @@ export function LessonPage() {
 
       setCurrentStepIndex(nextIndex);
       localStorage.setItem(`lesson_progress_${leccionId}`, String(nextIndex));
+        if (progresoId && steps[nextIndex].type !== 'completed') {
+          const porcentajeParcial = Math.round((nextIndex / (steps.length - 1)) * 100);
+          progresoLeccionService.parcial(progresoId, porcentajeParcial).catch(() => {});
+        }
       window.scrollTo(0, 0);
     }
   };

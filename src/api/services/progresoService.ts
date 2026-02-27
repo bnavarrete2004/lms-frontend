@@ -70,7 +70,11 @@ class ProgresoLeccionService extends BaseService<ProgresoLeccion> {
   async completar(progresoId: number): Promise<ProgresoLeccion> {
     return this.customAction(progresoId, 'completar');
   }
+  async parcial(progresoId: number, porcentaje: number): Promise<void> {
+  await this.customAction(progresoId, 'parcial', { porcentaje });
 }
+}
+
 
 // ============================================
 // EXPORTS
@@ -82,3 +86,5 @@ export const progresoLeccionService = new ProgresoLeccionService();
 // progresoService = alias para compatibilidad con CourseDetailPage
 export const progresoService = progresoModuloService;
 export default progresoModuloService;
+
+
