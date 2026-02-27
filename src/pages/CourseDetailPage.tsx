@@ -326,24 +326,24 @@ export function CourseDetailPage() {
       headerTitle={curso.nombre}
       headerSubtitle={curso.codigo_sence_data?.codigo ? `Código SENCE: ${curso.codigo_sence_data.codigo}` : ''}
     >
-      {/* HERO SECTION - Mantenido de la versión anterior */}
+      {/* HERO SECTION - SIN FILTRO AZUL */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-        <div className="relative h-64 bg-gradient-to-br from-jc-blue via-jc-cyan to-jc-calipso">
+        <div className="relative h-64 bg-slate-900">
           {curso.imagen_portada && (
             <img
               src={curso.imagen_portada}
               alt={curso.nombre}
-              className="absolute inset-0 w-full h-full object-cover opacity-30"
+              className="absolute inset-0 w-full h-full object-cover opacity-100"
             />
           )}
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
             <div className="text-center text-white p-8">
-              <h1 className="text-4xl font-bold mb-2">{curso.nombre}</h1>
+              <h1 className="text-4xl font-bold mb-2 drop-shadow-md">{curso.nombre}</h1>
               <div className="flex items-center justify-center space-x-4 text-sm">
-                <Badge variant="info" className="bg-white/20 backdrop-blur-sm text-white border-white/30">
+                <Badge variant="info" className="bg-black/40 backdrop-blur-md text-white border-white/20">
                   {curso.horas_totales} horas
                 </Badge>
-                <Badge variant="info" className="bg-white/20 backdrop-blur-sm text-white border-white/30">
+                <Badge variant="info" className="bg-black/40 backdrop-blur-md text-white border-white/20">
                   {modulos.length} módulos
                 </Badge>
               </div>

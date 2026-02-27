@@ -4,7 +4,10 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -43,6 +46,10 @@ function getYoutubeEmbedUrl(url: string): string | null {
   if (!url) return null;
   const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
   return match ? `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1` : null;
+}
+
+function getProxyUrl(url: string): string {
+  return `http://localhost:8000/api/proxy-archivo/?url=${encodeURIComponent(url)}`;
 }
 
 
@@ -114,6 +121,12 @@ export function LessonPage() {
         setLeccion(leccionData);
         setSteps(constructSteps(leccionData, materialesData));
 
+        // Restaurar progreso guardado
+        const savedStep = localStorage.getItem(`lesson_progress_${leccionId}`);
+        if (savedStep) {
+          setCurrentStepIndex(parseInt(savedStep));
+        }
+
         // Buscar el progresoId de esta lección para este alumno
         const inscripcionActual = inscripciones.find((ins: any) => ins.curso === parseInt(cursoId ?? '0'));
         if (inscripcionActual) {
@@ -145,6 +158,7 @@ export function LessonPage() {
       }
 
       setCurrentStepIndex(nextIndex);
+      localStorage.setItem(`lesson_progress_${leccionId}`, String(nextIndex));
       window.scrollTo(0, 0);
     }
   };
@@ -152,6 +166,7 @@ export function LessonPage() {
   const goToPrev = () => {
     if (currentStepIndex > 0) {
       setCurrentStepIndex(i => i - 1);
+      localStorage.setItem(`lesson_progress_${leccionId}`, String(currentStepIndex - 1));
       window.scrollTo(0, 0);
     }
   };
@@ -433,7 +448,7 @@ function PdfStep({ step, onNext, onBack }: any) {
             </div>
           ) : (
             <Document
-              file={step.data.url}
+              file={getProxyUrl(step.data.url)}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={() => setLoadError(true)}
               loading={
