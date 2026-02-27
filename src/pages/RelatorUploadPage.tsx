@@ -242,7 +242,7 @@ export function RelatorUploadPage() {
                   <h2 className="text-2xl font-bold text-slate-800 mb-2">Paso 3: Carga de archivo</h2>
                   <p className="text-slate-500 mb-8">Sube el archivo original (PDF, PPTX, etc.)</p>
                   <div onClick={() => fileInputRef.current?.click()} className={`border-2 border-dashed rounded-3xl p-16 text-center cursor-pointer transition-all ${formData.file ? 'border-green-500 bg-green-50' : 'border-slate-200 hover:border-jc-blue hover:bg-blue-50'}`}>
-                    <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} accept=".pdf,.pptx,.docx,.zip" />
+                    <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} accept={formData.tipo === 'presentacion' ? '.pdf,.pptx' : formData.tipo === 'pdf' ? '.pdf' : '.pdf,.pptx,.docx,.zip'} />
                     {formData.file ? (
                       <div className="text-green-600"><CheckCircle2 size={64} className="mx-auto mb-4" /><p className="font-bold">{formData.file.name}</p></div>
                     ) : (
