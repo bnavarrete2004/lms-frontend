@@ -53,7 +53,6 @@ function getProxyUrl(url: string): string {
 }
 
 
-
 // ── Página principal ──────────────────────────────────────────────────────────
 
 export function LessonPage() {
@@ -120,12 +119,8 @@ export function LessonPage() {
 
         setLeccion(leccionData);
         setSteps(constructSteps(leccionData, materialesData));
-
-        // Restaurar progreso guardado
         const savedStep = localStorage.getItem(`lesson_progress_${leccionId}`);
-        if (savedStep) {
-          setCurrentStepIndex(parseInt(savedStep));
-        }
+        if (savedStep) setCurrentStepIndex(parseInt(savedStep));
 
         // Buscar el progresoId de esta lección para este alumno
         const inscripcionActual = inscripciones.find((ins: any) => ins.curso === parseInt(cursoId ?? '0'));
@@ -448,7 +443,7 @@ function PdfStep({ step, onNext, onBack }: any) {
             </div>
           ) : (
             <Document
-              file={getProxyUrl(step.data.url)}
+              file={step.data.url}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={() => setLoadError(true)}
               loading={
@@ -498,40 +493,138 @@ function PdfStep({ step, onNext, onBack }: any) {
   );
 }
 
-// ── Presentación ──────────────────────────────────────────────────────────────
+// ── Presentación (visor tipo slides) ─────────────────────────────────────────
 
 function PresentacionStep({ step, onNext, onBack }: any) {
+  const [numPages, setNumPages]         = useState<number | null>(null);
+  const [slideActual, setSlideActual]   = useState(1);
+  const [loadError, setLoadError]       = useState(false);
+  const [containerWidth, setContainerWidth] = useState(900);
+  const containerRef = useCallback((node: HTMLDivElement | null) => {
+    if (node) setContainerWidth(node.clientWidth);
+  }, []);
+
+  // Altura = ancho * 9/16 para respetar ratio de presentación
+  const slideHeight = Math.round(containerWidth * 9 / 16);
+
+  const irAnterior = () => setSlideActual(p => Math.max(1, p - 1));
+  const irSiguiente = () => setSlideActual(p => Math.min(numPages ?? 1, p + 1));
+
+  // Navegación con teclado
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') irSiguiente();
+      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   irAnterior();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [numPages]);
+
+  const esPrimera = slideActual === 1;
+  const esUltima  = slideActual === (numPages ?? 1);
+
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-amber-50">
+      {/* Visor */}
+      <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-2xl">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-700">
           <div className="flex items-center gap-2">
-            <Presentation size={16} className="text-amber-600" />
-            <span className="font-semibold text-slate-700 text-sm">{step.title}</span>
-            <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Presentación</span>
+            <Presentation size={16} className="text-amber-400" />
+            <span className="font-semibold text-slate-200 text-sm">{step.title}</span>
           </div>
-          <a href={step.data.url} target="_blank" rel="noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-semibold hover:bg-amber-200 transition">
-            <ExternalLink size={12} /> Descargar PPTX
-          </a>
+          <div className="flex items-center gap-3">
+            {numPages && (
+              <span className="text-xs font-bold text-slate-400">
+                {slideActual} / {numPages}
+              </span>
+            )}
+            <a href={step.data.url} target="_blank" rel="noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold hover:bg-slate-600 transition">
+              <ExternalLink size={12} /> Descargar
+            </a>
+          </div>
         </div>
-        <div className="flex flex-col items-center justify-center py-20 px-8 text-center bg-slate-50 gap-6">
-          <div className="w-20 h-20 bg-amber-100 rounded-2xl flex items-center justify-center">
-            <Presentation size={40} className="text-amber-500" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">{step.title}</h3>
-            <p className="text-sm text-slate-500 max-w-md">
-              Descarga la presentación para verla en tu dispositivo con PowerPoint o cualquier visor compatible.
-            </p>
-          </div>
-          <a href={step.data.url} target="_blank" rel="noreferrer"
-            className="flex items-center gap-2 px-8 py-3 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 transition shadow-md">
-            <ExternalLink size={18} /> Descargar Presentación
-          </a>
+
+        {/* Slide area */}
+        <div ref={containerRef} className="relative flex items-center justify-center bg-slate-800"
+          style={{ height: loadError ? 300 : slideHeight }}>
+
+          {/* Flecha izquierda */}
+          <button
+            onClick={irAnterior}
+            disabled={esPrimera}
+            className="absolute left-3 z-10 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center disabled:opacity-20 transition"
+          >
+            <ChevronLeft size={22} />
+          </button>
+
+          {/* PDF slide */}
+          {loadError ? (
+            <div className="flex flex-col items-center justify-center gap-4 text-slate-400">
+              <Presentation size={48} className="opacity-30" />
+              <p className="text-sm italic">No se pudo cargar la presentación.</p>
+              <a href={step.data.url} target="_blank" rel="noreferrer"
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold hover:bg-amber-600 transition">
+                <ExternalLink size={14} /> Descargar archivo
+              </a>
+            </div>
+          ) : (
+            <Document
+              file={getProxyUrl(step.data.url)}
+              onLoadSuccess={({ numPages }) => { setNumPages(numPages); setSlideActual(1); }}
+              onLoadError={() => setLoadError(true)}
+              loading={
+                <div className="flex items-center gap-3 text-slate-400">
+                  <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm">Cargando presentación...</span>
+                </div>
+              }
+            >
+              <Page
+                pageNumber={slideActual}
+                width={containerWidth}
+                height={slideHeight}
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+              />
+            </Document>
+          )}
+
+          {/* Flecha derecha */}
+          <button
+            onClick={irSiguiente}
+            disabled={esUltima}
+            className="absolute right-3 z-10 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center disabled:opacity-20 transition"
+          >
+            <ChevronRight size={22} />
+          </button>
         </div>
+
+        {/* Barra de progreso de slides */}
+        {numPages && (
+          <div className="px-5 py-3 bg-slate-900 flex items-center gap-3">
+            <div className="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden">
+              <div
+                className="h-1 bg-amber-400 rounded-full transition-all duration-300"
+                style={{ width: `${(slideActual / numPages) * 100}%` }}
+              />
+            </div>
+            <span className="text-[11px] text-slate-500 font-semibold whitespace-nowrap">
+              {Math.round((slideActual / numPages) * 100)}%
+            </span>
+          </div>
+        )}
       </div>
-      <NavBar title="" subtitle="" onBack={onBack} onNext={onNext} labelNext="Continuar" />
+
+      {/* Hint teclado */}
+      <p className="text-center text-xs text-slate-400">
+        Usa las flechas ← → del teclado para navegar entre slides
+      </p>
+
+      {/* Navegación lección */}
+      <NavBar title="" subtitle="" onBack={onBack} onNext={onNext} labelNext="Continuar con la lección" />
     </div>
   );
 }
