@@ -314,13 +314,14 @@ export function useCursoWizard() {
         try {
           const formData = new FormData();
           formData.append('file', curso.imagen_portada);
-          formData.append('nombre', `Portada - ${curso.nombre}`);
-          formData.append('tipo', 'imagen');
-          const uploadResp = await api.post('/upload/material/', formData, {
+          
+          // CAMBIO: Ahora usamos el endpoint dedicado a portadas para no crear un "Material" innecesario
+          const uploadResp = await api.post('/upload/course-cover/', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
           });
-          const imageUrl = uploadResp.data?.material?.archivo_url
-                        || uploadResp.data?.cloudinary?.url;
+          
+          const imageUrl = uploadResp.data?.url;
+          
           if (imageUrl) {
             await api.patch(`/cursos/${cursoCreado.id}/`, { imagen_portada: imageUrl });
           }
@@ -328,8 +329,6 @@ export function useCursoWizard() {
           console.warn('No se pudo subir la imagen de portada:', err);
         }
       }
-
-      // 2. Crear módulos en orden y guardar mapa localId → id real
 
       // 2. Crear módulos en orden y guardar mapa localId → id real
       const mapaModulos: Record<string, number> = {};
