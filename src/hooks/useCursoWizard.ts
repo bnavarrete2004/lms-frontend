@@ -57,7 +57,7 @@ export interface LeccionLocal {
   objetivos: string;
   orden: number;
   duracion_minutos: number | '';
-  tipo: 'teorica' | 'practica' | 'evaluacion' | 'mixta' | '';
+  tipo: 'teorica' | 'practica' | 'evaluacion' | 'mixta';
   obligatoria: boolean;
 }
 
@@ -203,7 +203,7 @@ export function useCursoWizard() {
         objetivos: '',
         orden: leccionesDelModulo.length + 1,
         duracion_minutos: '',
-        tipo: '',
+        tipo: 'teorica',
         obligatoria: true,
       };
       return { ...s, lecciones: [...s.lecciones, nuevaLeccion] };

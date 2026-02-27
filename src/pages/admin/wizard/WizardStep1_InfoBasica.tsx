@@ -4,6 +4,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { X, ImageIcon, ChevronRight, Search, UserPlus } from 'lucide-react';
 import type { DatosCurso } from '@/hooks/useCursoWizard';
+import api from '@/api/axios';
 
 // ── Tipos locales ─────────────────────────────────────────────────────────────
 
@@ -65,28 +66,27 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
   // ── Cargar datos al montar ─────────────────────────────────────────────────
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    const headers = { Authorization: `Bearer ${token}` };
-
-    // Cargar usuarios con tipo relator
-    fetch('/api/usuarios/?tipo_usuario=relator', { headers })
-      .then(r => r.json())
-      .then(data => {
-        const lista = Array.isArray(data) ? data : (data.results ?? []);
-        setTodosRelatores(lista.map((u: any) => ({
-          id: u.id,
-          nombre_completo: u.nombre_completo || `${u.nombre} ${u.apellido}`,
-          rut_completo: u.rut_completo || u.rut,
-          email: u.email,
-        })));
+    // Cargar TODOS los usuarios y filtrar relatores en frontend
+    // (el backend puede no soportar filtro ?tipo_usuario=relator)
+    api.get('/usuarios/')
+      .then(res => {
+        const lista: any[] = res.data?.results ?? res.data ?? [];
+        const relatores = lista
+          .filter((u: any) => u.tipo_usuario === 'relator')
+          .map((u: any) => ({
+            id: u.id,
+            nombre_completo: u.nombre_completo || `${u.user?.first_name ?? ''} ${u.user?.last_name ?? ''}`.trim() || u.user?.username || 'Sin nombre',
+            rut_completo: u.rut_completo,
+            email: u.user?.email,
+          }));
+        setTodosRelatores(relatores);
       })
-      .catch(err => console.error('❌ Error relatores:', err));
+      .catch(err => console.error('❌ Error cargando relatores:', err));
 
     // Cargar códigos SENCE
     setLoadingSence(true);
-    fetch('/api/codigos-sence/', { headers })
-      .then(r => r.json())
-      .then(data => setCodigosSence(Array.isArray(data) ? data : (data.results ?? [])))
+    api.get('/codigos-sence/')
+      .then(res => setCodigosSence(res.data?.results ?? res.data ?? []))
       .catch(err => console.error('❌ Error SENCE:', err))
       .finally(() => setLoadingSence(false));
   }, []);

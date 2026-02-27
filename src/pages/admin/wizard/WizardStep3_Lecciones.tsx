@@ -6,7 +6,6 @@
 import { useState } from 'react';
 import { Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { ModuloLocal, LeccionLocal } from '@/hooks/useCursoWizard';
-import type { TipoLeccion } from '@/api/services/leccionService';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -24,7 +23,6 @@ interface Props {
 interface ErroresLeccion {
   nombre?: string;
   duracion_minutos?: string;
-  tipo?: string;
 }
 
 // ── Helper ────────────────────────────────────────────────────────────────────
@@ -138,25 +136,6 @@ function LeccionCard({
                   <p className="text-xs text-red-500 mt-1">{error.duracion_minutos}</p>
                 )}
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Tipo de Lección <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={leccion.tipo}
-                  onChange={e => onActualizar({ tipo: e.target.value as TipoLeccion | '' })}
-                  className={inputCls(error?.tipo)}
-                >
-                  <option value="">Selecciona tipo</option>
-                  <option value="teorica">Teórica</option>
-                  <option value="practica">Práctica</option>
-                  <option value="evaluacion">Evaluación</option>
-                  <option value="mixta">Mixta</option>
-                </select>
-                {error?.tipo && (
-                  <p className="text-xs text-red-500 mt-1">{error.tipo}</p>
-                )}
-              </div>
             </div>
 
             {/* Obligatoria */}
@@ -224,10 +203,6 @@ export function WizardStep3_Lecciones({
         e.duracion_minutos = 'La duración debe ser al menos 5 minutos.';
         hayErrores = true;
       }
-      if (!l.tipo) {
-        e.tipo = 'Selecciona un tipo de lección.';
-        hayErrores = true;
-      }
       if (Object.keys(e).length > 0) nuevosErrores[l._localId] = e;
     });
 
@@ -254,8 +229,7 @@ export function WizardStep3_Lecciones({
     lecciones.every(l =>
       l.nombre.trim() &&
       l.duracion_minutos !== '' &&
-      Number(l.duracion_minutos) >= 5 &&
-      l.tipo !== ''
+      Number(l.duracion_minutos) >= 5
     );
 
   // ── Render ──────────────────────────────────────────────────────────────────
