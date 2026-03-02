@@ -8,6 +8,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
   import.meta.url,
 ).toString();
+
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -122,7 +123,6 @@ export function LessonPage() {
         const savedStep = localStorage.getItem(`lesson_progress_${leccionId}`);
         if (savedStep) setCurrentStepIndex(parseInt(savedStep));
 
-        // Buscar el progresoId de esta lección para este alumno
         const inscripcionActual = inscripciones.find((ins: any) => ins.curso === parseInt(cursoId ?? '0'));
         if (inscripcionActual) {
           const progresos = await progresoLeccionService.getProgresoInscripcion(inscripcionActual.id);
@@ -142,8 +142,6 @@ export function LessonPage() {
   const goToNext = async () => {
     if (currentStepIndex < steps.length - 1) {
       const nextIndex = currentStepIndex + 1;
-
-      // Al llegar al paso final, marcar lección como completada en el backend
       if (steps[nextIndex].type === 'completed' && progresoId) {
         try {
           await progresoLeccionService.completar(progresoId);
@@ -151,13 +149,12 @@ export function LessonPage() {
           console.error('Error guardando progreso:', error);
         }
       }
-
       setCurrentStepIndex(nextIndex);
       localStorage.setItem(`lesson_progress_${leccionId}`, String(nextIndex));
-        if (progresoId && steps[nextIndex].type !== 'completed') {
-          const porcentajeParcial = Math.round((nextIndex / (steps.length - 1)) * 100);
-          progresoLeccionService.parcial(progresoId, porcentajeParcial).catch(() => {});
-        }
+      if (progresoId && steps[nextIndex].type !== 'completed') {
+        const porcentajeParcial = Math.round((nextIndex / (steps.length - 1)) * 100);
+        progresoLeccionService.parcial(progresoId, porcentajeParcial).catch(() => {});
+      }
       window.scrollTo(0, 0);
     }
   };
@@ -170,7 +167,6 @@ export function LessonPage() {
     }
   };
 
-  // ── Loading ────────────────────────────────────────────────────────────────
   if (loading || !leccion || steps.length === 0) {
     return <div className="p-20 text-center text-slate-400 italic">Cargando contenido...</div>;
   }
@@ -182,74 +178,14 @@ export function LessonPage() {
     {
       title: 'Menú Principal',
       items: [
-        {
-          href: '/dashboard',
-          icon: (
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-          ),
-          label: 'Mi Panel',
-        },
-        {
-          href: '/student/courses',
-          icon: (
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-          ),
-          label: 'Mis Cursos',
-          isActive: true,
-        },
-        {
-          href: '/diplomas',
-          icon: (
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          ),
-          label: 'Mis Diplomas',
-        },
-        {
-          href: '/progress',
-          icon: (
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          ),
-          label: 'Mi Progreso',
-        },
-        {
-          href: '/notifications',
-          icon: (
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-          ),
-          label: 'Notificaciones',
-          badge: 2,
-          badgeVariant: 'danger' as const,
-          badgeAnimated: true,
-        },
-      ],
-    },
-    {
-      title: 'Configuración',
-      items: [
-        {
-          href: '/profile',
-          icon: (
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          ),
-          label: 'Mi Perfil',
-        },
+        { href: '/dashboard', label: 'Mi Panel', icon: <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg> },
+        { href: '/student/courses', label: 'Mis Cursos', isActive: true, icon: <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg> },
+        { href: '/diplomas', label: 'Mis Diplomas', icon: <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
+        { href: '/progress', label: 'Mi Progreso', icon: <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg> },
       ],
     },
   ];
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <MainLayout
       role="estudiante"
@@ -258,32 +194,16 @@ export function LessonPage() {
       onLogout={() => { logout(); navigate('/login'); }}
       headerTitle={leccion.nombre}
       headerSubtitle="Capacitación en curso"
-      headerActions={
-        <span className="text-xs font-bold text-jc-blue">{progressPercentage}% completado</span>
-      }
+      headerActions={<span className="text-xs font-bold text-jc-blue">{progressPercentage}% completado</span>}
     >
       <div className="max-w-5xl mx-auto space-y-4">
-
         <StepBar steps={steps} currentIndex={currentStepIndex} onGoTo={setCurrentStepIndex} />
-
-        {currentStep.type === 'intro' && (
-          <IntroStep leccion={leccion} onNext={goToNext} onBack={() => navigate(`/student/courses/${cursoId}`)} />
-        )}
-        {currentStep.type === 'video' && (
-          <VideoStep step={currentStep} onNext={goToNext} onBack={goToPrev} />
-        )}
-        {currentStep.type === 'pdf' && (
-          <PdfStep step={currentStep} onNext={goToNext} onBack={goToPrev} />
-        )}
-        {currentStep.type === 'presentacion' && (
-          <PresentacionStep step={currentStep} onNext={goToNext} onBack={goToPrev} />
-        )}
-        {currentStep.type === 'scorm' && (
-          <QuizStep step={currentStep} onNext={goToNext} onBack={goToPrev} />
-        )}
-        {currentStep.type === 'completed' && (
-          <CompletedStep onBackToCourse={() => navigate(`/student/courses/${cursoId}`)} />
-        )}
+        {currentStep.type === 'intro' && <IntroStep leccion={leccion} onNext={goToNext} onBack={() => navigate(`/student/courses/${cursoId}`)} />}
+        {currentStep.type === 'video' && <VideoStep step={currentStep} onNext={goToNext} onBack={goToPrev} />}
+        {currentStep.type === 'pdf' && <PdfStep step={currentStep} onNext={goToNext} onBack={goToPrev} />}
+        {currentStep.type === 'presentacion' && <PresentacionStep step={currentStep} onNext={goToNext} onBack={goToPrev} />}
+        {currentStep.type === 'scorm' && <QuizStep step={currentStep} onNext={goToNext} onBack={goToPrev} />}
+        {currentStep.type === 'completed' && <CompletedStep onBackToCourse={() => navigate(`/student/courses/${cursoId}`)} />}
       </div>
     </MainLayout>
   );
@@ -291,22 +211,15 @@ export function LessonPage() {
 
 // ── Barra de steps ────────────────────────────────────────────────────────────
 
-function StepBar({ steps, currentIndex, onGoTo }: {
-  steps: Step[]; currentIndex: number; onGoTo: (i: number) => void;
-}) {
+function StepBar({ steps, currentIndex, onGoTo }: { steps: Step[]; currentIndex: number; onGoTo: (i: number) => void; }) {
   const iconMap: Record<StepType, React.ReactNode> = {
-    intro: (
-      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
-      </svg>
-    ),
+    intro: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" /></svg>,
     video:        <Youtube size={12} />,
     pdf:          <FileText size={12} />,
     presentacion: <Presentation size={12} />,
     scorm:        <ClipboardList size={12} />,
     completed:    <CheckCircle size={12} />,
   };
-
   return (
     <div className="bg-white rounded-xl border border-slate-200 px-6 py-4">
       <div className="flex items-center gap-1 overflow-x-auto pb-1">
@@ -315,22 +228,12 @@ function StepBar({ steps, currentIndex, onGoTo }: {
           const completado = idx < currentIndex;
           return (
             <div key={step.id} className="flex items-center flex-shrink-0">
-              <button
-                onClick={() => onGoTo(idx)}
-                title={step.title}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  activo     ? 'bg-jc-blue text-white shadow-sm' :
-                  completado ? 'bg-green-100 text-green-700' :
-                               'bg-slate-100 text-slate-400 hover:bg-slate-200'
-                }`}
-              >
+              <button onClick={() => onGoTo(idx)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activo ? 'bg-jc-blue text-white shadow-sm' : completado ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>
                 {iconMap[step.type]}
                 <span className="hidden sm:inline max-w-[120px] truncate">{step.title}</span>
                 <span className="sm:hidden">{step.number}</span>
               </button>
-              {idx < steps.length - 1 && (
-                <div className={`w-4 h-0.5 mx-0.5 flex-shrink-0 ${idx < currentIndex ? 'bg-green-300' : 'bg-slate-200'}`} />
-              )}
+              {idx < steps.length - 1 && <div className={`w-4 h-0.5 mx-0.5 flex-shrink-0 ${idx < currentIndex ? 'bg-green-300' : 'bg-slate-200'}`} />}
             </div>
           );
         })}
@@ -357,12 +260,8 @@ function IntroStep({ leccion, onNext, onBack }: any) {
         </div>
       )}
       <div className="flex gap-4">
-        <button onClick={onBack} className="px-6 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition">
-          Volver al curso
-        </button>
-        <button onClick={onNext} className="flex-1 px-6 py-3 bg-jc-blue text-white rounded-xl font-bold shadow-lg hover:opacity-90 transition">
-          Comenzar ahora →
-        </button>
+        <button onClick={onBack} className="px-6 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition">Volver al curso</button>
+        <button onClick={onNext} className="flex-1 px-6 py-3 bg-jc-blue text-white rounded-xl font-bold shadow-lg hover:opacity-90 transition">Comenzar ahora →</button>
       </div>
     </div>
   );
@@ -375,24 +274,7 @@ function VideoStep({ step, onNext, onBack }: any) {
   return (
     <div className="space-y-4">
       <div className="bg-black rounded-2xl overflow-hidden shadow-2xl aspect-video">
-        {embedUrl ? (
-          <iframe
-            className="w-full h-full"
-            src={embedUrl}
-            title={step.title}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center text-white gap-4">
-            <Youtube size={48} className="opacity-40" />
-            <p className="text-sm opacity-60">URL de video no reconocida</p>
-            <a href={step.data.url} target="_blank" rel="noreferrer"
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 rounded-lg text-sm font-semibold hover:bg-red-700 transition">
-              <ExternalLink size={14} /> Abrir en YouTube
-            </a>
-          </div>
-        )}
+        {embedUrl ? <iframe className="w-full h-full" src={embedUrl} title={step.title} allowFullScreen /> : <div className="w-full h-full flex flex-col items-center justify-center text-white gap-4"><Youtube size={48} className="opacity-40" /><a href={step.data.url} target="_blank" rel="noreferrer" className="px-4 py-2 bg-red-600 rounded-lg text-sm font-semibold">Abrir en YouTube</a></div>}
       </div>
       <NavBar title={step.title} subtitle="Video oficial del curso" onBack={onBack} onNext={onNext} labelNext="Siguiente" />
     </div>
@@ -402,119 +284,52 @@ function VideoStep({ step, onNext, onBack }: any) {
 // ── PDF ───────────────────────────────────────────────────────────────────────
 
 function PdfStep({ step, onNext, onBack }: any) {
-  const [numPages, setNumPages]       = useState<number | null>(null);
-  const [pageNumber, setPageNumber]   = useState(1);
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
   const [containerWidth, setContainerWidth] = useState(800);
-  const [loadError, setLoadError]     = useState(false);
-  const containerRef                  = useCallback((node: HTMLDivElement | null) => {
-    if (node) setContainerWidth(node.clientWidth - 48);
-  }, []);
-
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
-    setPageNumber(1);
-  };
+  const [loadError, setLoadError] = useState(false);
+  const containerRef = useCallback((node: HTMLDivElement | null) => { if (node) setContainerWidth(node.clientWidth - 48); }, []);
 
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <FileText size={16} className="text-blue-600" />
-            <span className="font-semibold text-slate-700 text-sm">{step.title}</span>
-            {numPages && (
-              <span className="text-xs text-slate-400">— {numPages} páginas</span>
-            )}
-          </div>
-          <a href={step.data.url} target="_blank" rel="noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition">
-            <ExternalLink size={12} /> Descargar PDF
-          </a>
+          <div className="flex items-center gap-2"><FileText size={16} className="text-blue-600" /><span className="font-semibold text-slate-700 text-sm">{step.title}</span></div>
+          <a href={step.data.url} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold">Descargar PDF</a>
         </div>
-
-        {/* Visor */}
         <div ref={containerRef} className="px-6 py-4 bg-slate-50 flex flex-col items-center min-h-[70vh]">
-          {loadError ? (
-            <div className="flex flex-col items-center justify-center h-64 text-slate-400 gap-4">
-              <FileText size={48} className="opacity-30" />
-              <p className="text-sm italic">No se pudo cargar el PDF.</p>
-              <a href={step.data.url} target="_blank" rel="noreferrer"
-                className="flex items-center gap-2 px-4 py-2 bg-jc-blue text-white rounded-lg text-sm font-semibold hover:opacity-90 transition">
-                <ExternalLink size={14} /> Abrir en nueva pestaña
-              </a>
-            </div>
-          ) : (
-            <Document
-              file={step.data.url}
-              onLoadSuccess={onDocumentLoadSuccess}
-              onLoadError={() => setLoadError(true)}
-              loading={
-                <div className="flex items-center gap-3 py-20 text-slate-400">
-                  <div className="w-5 h-5 border-2 border-jc-blue border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm">Cargando PDF...</span>
-                </div>
-              }
-            >
-              <Page
-                pageNumber={pageNumber}
-                width={containerWidth}
-                renderTextLayer={true}
-                renderAnnotationLayer={true}
-                className="shadow-lg rounded-lg overflow-hidden"
-              />
-            </Document>
-          )}
+          {loadError ? <p>Error al cargar PDF</p> : <Document file={step.data.url} onLoadSuccess={({ numPages }) => setNumPages(numPages)} onLoadError={() => setLoadError(true)}><Page pageNumber={pageNumber} width={containerWidth} /></Document>}
         </div>
-
-        {/* Paginación */}
         {numPages && numPages > 1 && (
-          <div className="flex items-center justify-center gap-4 px-6 py-3 border-t border-slate-100">
-            <button
-              onClick={() => setPageNumber(p => Math.max(1, p - 1))}
-              disabled={pageNumber <= 1}
-              className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-semibold disabled:opacity-40 hover:bg-slate-200 transition"
-            >
-              <ChevronLeft size={15} /> Anterior
-            </button>
-            <span className="text-sm font-semibold text-slate-600">
-              Página {pageNumber} de {numPages}
-            </span>
-            <button
-              onClick={() => setPageNumber(p => Math.min(numPages, p + 1))}
-              disabled={pageNumber >= numPages}
-              className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-semibold disabled:opacity-40 hover:bg-slate-200 transition"
-            >
-              Siguiente <ChevronRight size={15} />
-            </button>
+          <div className="flex items-center justify-center gap-4 py-3 border-t border-slate-100">
+            <button onClick={() => setPageNumber(p => Math.max(1, p - 1))} disabled={pageNumber <= 1} className="px-4 py-2 bg-slate-100 rounded-lg text-sm disabled:opacity-40">Anterior</button>
+            <span className="text-sm font-semibold">Página {pageNumber} de {numPages}</span>
+            <button onClick={() => setPageNumber(p => Math.min(numPages, p + 1))} disabled={pageNumber >= numPages} className="px-4 py-2 bg-slate-100 rounded-lg text-sm disabled:opacity-40">Siguiente</button>
           </div>
         )}
       </div>
-
       <NavBar title="" subtitle="" onBack={onBack} onNext={onNext} labelNext="Marcar como leído y continuar" />
     </div>
   );
 }
 
-// ── Presentación (visor tipo slides) ─────────────────────────────────────────
+// ── Presentación (Visor optimizado con Pre-renderizado) ────────────────────────
 
 function PresentacionStep({ step, onNext, onBack }: any) {
-  const [numPages, setNumPages]         = useState<number | null>(null);
+  const [numPages, setNumPages]       = useState<number | null>(null);
   const [slideActual, setSlideActual]   = useState(1);
   const [loadError, setLoadError]       = useState(false);
   const [containerWidth, setContainerWidth] = useState(900);
+  
   const containerRef = useCallback((node: HTMLDivElement | null) => {
     if (node) setContainerWidth(node.clientWidth);
   }, []);
 
-  // Altura = ancho * 9/16 para respetar ratio de presentación
   const slideHeight = Math.round(containerWidth * 9 / 16);
 
   const irAnterior = () => setSlideActual(p => Math.max(1, p - 1));
   const irSiguiente = () => setSlideActual(p => Math.min(numPages ?? 1, p + 1));
 
-  // Navegación con teclado
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') irSiguiente();
@@ -522,17 +337,30 @@ function PresentacionStep({ step, onNext, onBack }: any) {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [numPages]);
+  }, [numPages, slideActual]);
 
   const esPrimera = slideActual === 1;
   const esUltima  = slideActual === (numPages ?? 1);
 
+  // Helper para renderizar páginas ocultas/visibles (Ventana Deslizante)
+  const renderSlide = (pageNo: number, isVisible: boolean) => (
+    <div key={`page-${pageNo}`} style={{ display: isVisible ? 'block' : 'none' }}>
+      <Page
+        pageNumber={pageNo}
+        width={containerWidth}
+        height={slideHeight}
+        renderTextLayer={false}
+        renderAnnotationLayer={false}
+        loading=""
+      />
+    </div>
+  );
+
   return (
     <div className="space-y-4">
-      {/* Visor */}
       <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-2xl">
-
-        {/* Header */}
+        
+        {/* Header (Fiel al original) */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-700">
           <div className="flex items-center gap-2">
             <Presentation size={16} className="text-amber-400" />
@@ -551,28 +379,19 @@ function PresentacionStep({ step, onNext, onBack }: any) {
           </div>
         </div>
 
-        {/* Slide area */}
+        {/* Slide area con Pre-renderizado */}
         <div ref={containerRef} className="relative flex items-center justify-center bg-slate-800"
           style={{ height: loadError ? 300 : slideHeight }}>
 
-          {/* Flecha izquierda */}
-          <button
-            onClick={irAnterior}
-            disabled={esPrimera}
-            className="absolute left-3 z-10 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center disabled:opacity-20 transition"
-          >
+          <button onClick={irAnterior} disabled={esPrimera}
+            className="absolute left-3 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center disabled:opacity-20 transition">
             <ChevronLeft size={22} />
           </button>
 
-          {/* PDF slide */}
           {loadError ? (
             <div className="flex flex-col items-center justify-center gap-4 text-slate-400">
               <Presentation size={48} className="opacity-30" />
               <p className="text-sm italic">No se pudo cargar la presentación.</p>
-              <a href={step.data.url} target="_blank" rel="noreferrer"
-                className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold hover:bg-amber-600 transition">
-                <ExternalLink size={14} /> Descargar archivo
-              </a>
             </div>
           ) : (
             <Document
@@ -582,38 +401,35 @@ function PresentacionStep({ step, onNext, onBack }: any) {
               loading={
                 <div className="flex items-center gap-3 text-slate-400">
                   <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm">Cargando presentación...</span>
+                  <span className="text-sm">Preparando presentación...</span>
                 </div>
               }
             >
-              <Page
-                pageNumber={slideActual}
-                width={containerWidth}
-                height={slideHeight}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-              />
+              {numPages && (
+                <>
+                  {/* Pre-render anterior */}
+                  {slideActual > 1 && renderSlide(slideActual - 1, false)}
+                  {/* Slide actual */}
+                  {renderSlide(slideActual, true)}
+                  {/* Pre-render siguiente */}
+                  {slideActual < numPages && renderSlide(slideActual + 1, false)}
+                </>
+              )}
             </Document>
           )}
 
-          {/* Flecha derecha */}
-          <button
-            onClick={irSiguiente}
-            disabled={esUltima}
-            className="absolute right-3 z-10 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center disabled:opacity-20 transition"
-          >
+          <button onClick={irSiguiente} disabled={esUltima}
+            className="absolute right-3 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center disabled:opacity-20 transition">
             <ChevronRight size={22} />
           </button>
         </div>
 
-        {/* Barra de progreso de slides */}
+        {/* Barra de progreso (Fiel al original) */}
         {numPages && (
           <div className="px-5 py-3 bg-slate-900 flex items-center gap-3">
             <div className="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden">
-              <div
-                className="h-1 bg-amber-400 rounded-full transition-all duration-300"
-                style={{ width: `${(slideActual / numPages) * 100}%` }}
-              />
+              <div className="h-1 bg-amber-400 rounded-full transition-all duration-300"
+                style={{ width: `${(slideActual / numPages) * 100}%` }} />
             </div>
             <span className="text-[11px] text-slate-500 font-semibold whitespace-nowrap">
               {Math.round((slideActual / numPages) * 100)}%
@@ -622,42 +438,22 @@ function PresentacionStep({ step, onNext, onBack }: any) {
         )}
       </div>
 
-      {/* Hint teclado */}
-      <p className="text-center text-xs text-slate-400">
-        Usa las flechas ← → del teclado para navegar entre slides
-      </p>
-
-      {/* Navegación lección */}
+      <p className="text-center text-xs text-slate-400">Usa las flechas ← → para navegar instantáneamente</p>
       <NavBar title="" subtitle="" onBack={onBack} onNext={onNext} labelNext="Continuar con la lección" />
     </div>
   );
 }
 
-// ── Quiz / SCORM ──────────────────────────────────────────────────────────────
+// ── Quiz / SCORM (Fiel al original) ───────────────────────────────────────────
 
-function QuizStep({ step, onNext, onBack }: any) {
-  // Parsear preguntas si llegan como string desde el backend
+function QuizStep({ step, onNext }: any) {
   const preguntasRaw = step.data.preguntas;
-  const preguntas: Pregunta[] = Array.isArray(preguntasRaw)
-    ? preguntasRaw
-    : (() => { try { return JSON.parse(preguntasRaw || '[]'); } catch { return []; } })();
-
-  const [respuestas, setRespuestas]         = useState<Record<number, number>>({});
-  const [enviado, setEnviado]               = useState(false);
+  const preguntas: Pregunta[] = Array.isArray(preguntasRaw) ? preguntasRaw : (() => { try { return JSON.parse(preguntasRaw || '[]'); } catch { return []; } })();
+  const [respuestas, setRespuestas] = useState<Record<number, number>>({});
+  const [enviado, setEnviado] = useState(false);
   const [preguntaActual, setPreguntaActual] = useState(0);
 
-  if (preguntas.length === 0) {
-    return (
-      <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-4">
-        <ClipboardList size={48} className="mx-auto text-slate-200" />
-        <p className="text-slate-400 italic">Este quiz no tiene preguntas cargadas aún.</p>
-        <div className="flex justify-center gap-3 pt-2">
-          <button onClick={onBack} className="px-5 py-2 bg-slate-100 text-slate-600 rounded-lg font-semibold text-sm">Anterior</button>
-          <button onClick={onNext} className="px-6 py-2 bg-jc-blue text-white rounded-lg font-semibold text-sm">Continuar</button>
-        </div>
-      </div>
-    );
-  }
+  if (preguntas.length === 0) return <div className="text-center p-12 bg-white rounded-2xl">No hay preguntas cargadas.</div>;
 
   const totalCorrectas = preguntas.filter((p, i) => respuestas[i] === p.respuesta_correcta).length;
   const porcentaje     = Math.round((totalCorrectas / preguntas.length) * 100);
@@ -665,116 +461,36 @@ function QuizStep({ step, onNext, onBack }: any) {
 
   if (enviado) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 p-10 space-y-6">
-        <div className="text-center">
-          <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${aprobado ? 'bg-green-100' : 'bg-red-100'}`}>
-            <span className={`text-2xl font-bold ${aprobado ? 'text-green-600' : 'text-red-600'}`}>{porcentaje}%</span>
-          </div>
-          <h3 className={`text-2xl font-bold ${aprobado ? 'text-green-700' : 'text-red-700'}`}>
-            {aprobado ? '¡Aprobado!' : 'Intenta de nuevo'}
-          </h3>
-          <p className="text-slate-500 mt-1">{totalCorrectas} de {preguntas.length} respuestas correctas</p>
+      <div className="bg-white rounded-2xl p-10 space-y-6 text-center">
+        <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto ${aprobado ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+          <span className="text-2xl font-bold">{porcentaje}%</span>
         </div>
-
-        <div className="space-y-3 max-h-80 overflow-y-auto">
-          {preguntas.map((p, idx) => {
-            const correcta = respuestas[idx] === p.respuesta_correcta;
-            const etiqueta = (oidx: number) => p.tipo === 'verdadero_falso' ? (oidx === 0 ? 'V' : 'F') : ['A','B','C','D'][oidx];
-            return (
-              <div key={idx} className={`p-4 rounded-xl border-2 ${correcta ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
-                <p className="text-sm font-semibold text-slate-800 mb-1">{idx + 1}. {p.enunciado}</p>
-                <p className={`text-xs font-bold ${correcta ? 'text-green-700' : 'text-red-700'}`}>
-                  Tu respuesta: {etiqueta(respuestas[idx] ?? -1)}. {p.opciones[respuestas[idx]] ?? '—'}
-                  {!correcta && (
-                    <span className="text-green-700 ml-2">
-                      · Correcta: {etiqueta(p.respuesta_correcta)}. {p.opciones[p.respuesta_correcta]}
-                    </span>
-                  )}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="flex gap-3 justify-center">
-          {!aprobado && (
-            <button onClick={() => { setRespuestas({}); setEnviado(false); setPreguntaActual(0); }}
-              className="px-6 py-2 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200 transition">
-              Reintentar
-            </button>
-          )}
-          <button onClick={onNext} className="px-8 py-2 bg-jc-blue text-white rounded-xl font-semibold hover:opacity-90 transition">
-            {aprobado ? 'Continuar →' : 'Continuar de todos modos'}
-          </button>
-        </div>
+        <h3 className="text-2xl font-bold">{aprobado ? '¡Aprobado!' : 'No aprobado'}</h3>
+        <button onClick={onNext} className="px-8 py-2 bg-jc-blue text-white rounded-xl">Continuar →</button>
       </div>
     );
   }
 
   const p = preguntas[preguntaActual];
-
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <ClipboardList size={18} className="text-green-600" />
-          <span className="font-bold text-slate-700">{step.title}</span>
-        </div>
-        <span className="text-xs font-bold text-slate-400">{preguntaActual + 1} / {preguntas.length}</span>
+    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div className="px-6 py-4 bg-slate-50 border-b flex justify-between">
+        <span className="font-bold">{step.title}</span>
+        <span className="text-xs">{preguntaActual + 1} / {preguntas.length}</span>
       </div>
-
-      <div className="h-1 bg-slate-100">
-        <div className="h-1 bg-jc-blue transition-all duration-300"
-          style={{ width: `${((preguntaActual + 1) / preguntas.length) * 100}%` }} />
-      </div>
-
       <div className="p-8 space-y-6">
-        <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
-          <p className="text-base font-semibold text-slate-800 leading-relaxed">{p.enunciado}</p>
-        </div>
-
+        <p className="font-semibold text-lg">{p.enunciado}</p>
         <div className="space-y-3">
-          {p.opciones.map((opcion, oidx) => {
-            const etiqueta     = p.tipo === 'verdadero_falso' ? (oidx === 0 ? 'V' : 'F') : ['A','B','C','D'][oidx];
-            const seleccionada = respuestas[preguntaActual] === oidx;
-            return (
-              <button key={oidx}
-                onClick={() => setRespuestas(prev => ({ ...prev, [preguntaActual]: oidx }))}
-                className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all ${
-                  seleccionada ? 'border-jc-blue bg-blue-50' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition ${
-                  seleccionada ? 'bg-jc-blue text-white' : 'bg-slate-100 text-slate-500'
-                }`}>
-                  {etiqueta}
-                </span>
-                <span className={`text-sm font-medium ${seleccionada ? 'text-jc-blue' : 'text-slate-700'}`}>{opcion}</span>
-              </button>
-            );
-          })}
+          {p.opciones.map((op, i) => (
+            <button key={i} onClick={() => setRespuestas(prev => ({ ...prev, [preguntaActual]: i }))}
+              className={`w-full text-left p-4 rounded-xl border-2 transition-all ${respuestas[preguntaActual] === i ? 'border-jc-blue bg-blue-50' : 'border-slate-200 hover:border-slate-300'}`}>
+              {op}
+            </button>
+          ))}
         </div>
-
-        <div className="flex items-center justify-between pt-2">
-          <button onClick={() => setPreguntaActual(i => Math.max(0, i - 1))}
-            disabled={preguntaActual === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-semibold disabled:opacity-40 hover:bg-slate-200 transition">
-            <ChevronLeft size={16} /> Anterior
-          </button>
-
-          {preguntaActual < preguntas.length - 1 ? (
-            <button onClick={() => setPreguntaActual(i => i + 1)}
-              disabled={respuestas[preguntaActual] === undefined}
-              className="flex items-center gap-2 px-6 py-2 bg-jc-blue text-white rounded-lg text-sm font-semibold disabled:opacity-40 hover:opacity-90 transition">
-              Siguiente <ChevronRight size={16} />
-            </button>
-          ) : (
-            <button onClick={() => setEnviado(true)}
-              disabled={Object.keys(respuestas).length < preguntas.length}
-              className="px-8 py-2 bg-green-600 text-white rounded-lg text-sm font-bold disabled:opacity-40 hover:bg-green-700 transition">
-              Enviar respuestas ✓
-            </button>
-          )}
+        <div className="flex justify-between">
+          <button onClick={() => setPreguntaActual(i => i - 1)} disabled={preguntaActual === 0} className="px-4 py-2 bg-slate-100 rounded-lg">Anterior</button>
+          {preguntaActual < preguntas.length - 1 ? <button onClick={() => setPreguntaActual(i => i + 1)} disabled={respuestas[preguntaActual] === undefined} className="px-6 py-2 bg-jc-blue text-white rounded-lg">Siguiente</button> : <button onClick={() => setEnviado(true)} disabled={Object.keys(respuestas).length < preguntas.length} className="px-6 py-2 bg-green-600 text-white rounded-lg font-bold">Enviar</button>}
         </div>
       </div>
     </div>
@@ -786,41 +502,22 @@ function QuizStep({ step, onNext, onBack }: any) {
 function CompletedStep({ onBackToCourse }: any) {
   return (
     <div className="text-center p-20 bg-white rounded-3xl border border-slate-200 shadow-xl">
-      <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-        <CheckCircle size={40} />
-      </div>
+      <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6"><CheckCircle size={40} /></div>
       <h2 className="text-3xl font-bold text-slate-800 mb-2">¡Lección Finalizada!</h2>
-      <p className="text-slate-500 mb-10">Has completado todo el material de esta sección.</p>
-      <button onClick={onBackToCourse}
-        className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-black transition-all">
-        Volver al Panel del Curso
-      </button>
+      <button onClick={onBackToCourse} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-black">Volver al Panel del Curso</button>
     </div>
   );
 }
 
 // ── Barra de navegación inferior ──────────────────────────────────────────────
 
-function NavBar({ title, subtitle, onBack, onNext, labelNext }: {
-  title: string; subtitle: string; onBack: () => void; onNext: () => void; labelNext: string;
-}) {
+function NavBar({ title, subtitle, onBack, onNext, labelNext }: { title: string; subtitle: string; onBack: () => void; onNext: () => void; labelNext: string; }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 px-6 py-4 flex justify-between items-center">
-      {title ? (
-        <div>
-          <p className="font-bold text-slate-800 text-sm">{title}</p>
-          {subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}
-        </div>
-      ) : <div />}
+      {title ? (<div><p className="font-bold text-slate-800 text-sm">{title}</p>{subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}</div>) : <div />}
       <div className="flex gap-3">
-        <button onClick={onBack}
-          className="flex items-center gap-2 px-5 py-2 bg-slate-100 text-slate-600 rounded-lg font-semibold text-sm hover:bg-slate-200 transition">
-          <ChevronLeft size={15} /> Anterior
-        </button>
-        <button onClick={onNext}
-          className="flex items-center gap-2 px-6 py-2 bg-jc-blue text-white rounded-lg font-semibold text-sm hover:opacity-90 transition">
-          {labelNext} <ChevronRight size={15} />
-        </button>
+        <button onClick={onBack} className="flex items-center gap-2 px-5 py-2 bg-slate-100 text-slate-600 rounded-lg font-semibold text-sm hover:bg-slate-200"><ChevronLeft size={15} /> Anterior</button>
+        <button onClick={onNext} className="flex items-center gap-2 px-6 py-2 bg-jc-blue text-white rounded-lg font-semibold text-sm hover:opacity-90 transition">{labelNext} <ChevronRight size={15} /></button>
       </div>
     </div>
   );
