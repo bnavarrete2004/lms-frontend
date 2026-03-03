@@ -656,38 +656,66 @@ export function AdminRevisionPage() {
       )}
 
       {/* ── Modal Aprobar ── */}
-      {materialAprobar && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-[4px]">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                <CheckCircle2 className="text-green-600" size={20} />
+      {materialAprobar && (() => {
+        const esEvaluacion = materialAprobar.tipo === 'examen' || materialAprobar.tipo === 'scorm';
+        return (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-[4px]">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle2 className="text-green-600" size={20} />
+                </div>
+                <h3 className="font-bold text-slate-800">¿Aprobar este material?</h3>
               </div>
-              <h3 className="font-bold text-slate-800">¿Aprobar este material?</h3>
-            </div>
-            <p className="text-sm text-slate-600 mb-6">
-              Se notificará al relator y el material quedará disponible en el repositorio:
-              <br />
-              <span className="font-semibold text-slate-800">"{materialAprobar.nombre}"</span>
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setMaterialAprobar(null)}
-                className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-bold text-sm"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleApprove}
-                disabled={isProcessing}
-                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-sm disabled:opacity-50"
-              >
-                {isProcessing ? 'Aprobando...' : 'Sí, aprobar'}
-              </button>
+
+              {/* Nombre del material */}
+              <p className="text-sm font-semibold text-slate-800 mb-3">
+                "{materialAprobar.nombre}"
+              </p>
+
+              {/* Mensaje contextual según tipo */}
+              {esEvaluacion ? (
+                <div className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-3 mb-6">
+                  <p className="text-xs font-bold text-purple-700 uppercase tracking-widest mb-1">
+                    {materialAprobar.tipo === 'examen' ? '✅ Examen' : '✅ Quiz'} — Activación directa
+                  </p>
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    {materialAprobar.tipo === 'examen'
+                      ? 'El examen no requiere maquetado. Al aprobar quedará activo en el curso y el relator recibirá notificación.'
+                      : 'El quiz no requiere maquetado. Al aprobar quedará activo en la lección y el relator recibirá notificación.'
+                    }
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-6">
+                  <p className="text-xs font-bold text-amber-700 uppercase tracking-widest mb-1">
+                    📐 Pasará a Mesa de Diseño
+                  </p>
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    El material irá a <strong>Repositorio → Mesa de Diseño</strong> para ser maquetado antes de publicarse. El relator recibirá notificación.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setMaterialAprobar(null)}
+                  className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-bold text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleApprove}
+                  disabled={isProcessing}
+                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-sm disabled:opacity-50"
+                >
+                  {isProcessing ? 'Aprobando...' : 'Sí, aprobar'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </MainLayout>
   );
 }
