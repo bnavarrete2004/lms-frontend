@@ -10,8 +10,6 @@ import type { AsignacionLocal } from './WizardStep4_Actividades';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
-type OpcionPublicacion = 'activo' | 'borrador';
-
 interface Props {
   curso: DatosCurso;
   modulos: ModuloLocal[];
@@ -19,7 +17,7 @@ interface Props {
   asignaciones: AsignacionLocal[];
   guardando: boolean;
   leccionesPorModulo: (moduloLocalId: string) => LeccionLocal[];
-  onPublicar: (estado: OpcionPublicacion) => Promise<void>;
+  onPublicar: (estado: 'activo' | 'borrador') => Promise<void>;
   onAnterior: () => void;
   onIrAPaso: (paso: 1 | 2 | 3 | 4 | 5) => void;
 }
@@ -59,9 +57,9 @@ function ModalExito({
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle2 size={48} className="text-green-600" />
         </div>
-        <h2 className="text-2xl font-bold text-slate-800 mb-3">¡Curso Publicado Exitosamente!</h2>
+        <h2 className="text-2xl font-bold text-slate-800 mb-3">¡Borrador guardado!</h2>
         <p className="text-slate-600 mb-8">
-          El curso <strong>"{nombreCurso}"</strong> ha sido creado y ya está disponible en la plataforma.
+          El curso <strong>"{nombreCurso}"</strong> fue creado como borrador. Cuando el relator suba los exámenes y los apruebes, podrás publicarlo desde el detalle del curso.
         </p>
         <button
           onClick={onVerCursos}
@@ -87,7 +85,6 @@ export function WizardStep5_Resumen({
   onAnterior,
   onIrAPaso,
 }: Props) {
-  const [opcion, setOpcion] = useState<OpcionPublicacion>('activo');
   const [publicado, setPublicado] = useState(false);
   const [modalConfirm, setModalConfirm] = useState(false);
 
@@ -95,7 +92,7 @@ export function WizardStep5_Resumen({
 
   async function handleConfirmarPublicacion() {
     setModalConfirm(false);
-    await onPublicar(opcion);
+    await onPublicar('borrador');  // Siempre borrador — publicación desde AdminCursoDetailPage
     setPublicado(true);
   }
 
@@ -223,40 +220,20 @@ export function WizardStep5_Resumen({
         </div>
       </div>
 
-      {/* ── Opciones de publicación ────────────────────────────────────── */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 mb-8">
-        <h3 className="font-semibold text-slate-800 mb-4">Opciones de Publicación</h3>
-
-        <div className="space-y-4">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="radio"
-              name="publish-option"
-              value="activo"
-              checked={opcion === 'activo'}
-              onChange={() => setOpcion('activo')}
-              className="mt-1 accent-jc-blue"
-            />
-            <div>
-              <p className="font-medium text-slate-800">Publicar ahora</p>
-              <p className="text-sm text-slate-500">El curso estará disponible inmediatamente para inscripciones</p>
-            </div>
-          </label>
-
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="radio"
-              name="publish-option"
-              value="borrador"
-              checked={opcion === 'borrador'}
-              onChange={() => setOpcion('borrador')}
-              className="mt-1 accent-jc-blue"
-            />
-            <div>
-              <p className="font-medium text-slate-800">Guardar como borrador</p>
-              <p className="text-sm text-slate-500">El curso se guardará pero no estará visible para estudiantes</p>
-            </div>
-          </label>
+      {/* ── Aviso: publicación en dos tiempos ─────────────────────────── */}
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6 flex items-start gap-4">
+        <AlertCircle size={22} className="text-blue-500 flex-shrink-0 mt-0.5" />
+        <div>
+          <h3 className="font-semibold text-blue-800 mb-1">El curso se guardará como borrador</h3>
+          <p className="text-sm text-blue-700 leading-relaxed">
+            Al guardar, la estructura del curso queda lista pero <strong>no visible para estudiantes</strong>.
+            Para publicarlo necesitas:
+          </p>
+          <ol className="mt-2 space-y-1 text-sm text-blue-700 list-decimal list-inside">
+            <li>Que el relator cree y suba el <strong>examen final</strong> (y los intermedios si aplica)</li>
+            <li>Aprobarlos en <strong>Revisión de Material</strong></li>
+            <li>Ir al detalle del curso y hacer click en <strong>"Publicar curso"</strong></li>
+          </ol>
         </div>
       </div>
 
@@ -274,12 +251,7 @@ export function WizardStep5_Resumen({
         <button
           onClick={() => setModalConfirm(true)}
           disabled={guardando}
-          className={`inline-flex items-center px-12 py-4 rounded-lg font-bold text-lg shadow-lg transition
-            ${opcion === 'activo'
-              ? 'bg-green-600 hover:bg-green-700 text-white'
-              : 'bg-slate-600 hover:bg-slate-700 text-white'
-            }
-            disabled:opacity-60 disabled:cursor-not-allowed`}
+          className="inline-flex items-center px-12 py-4 rounded-lg font-bold text-lg shadow-lg transition bg-jc-blue hover:bg-jc-blue-dark text-white disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {guardando ? (
             <>
@@ -287,12 +259,12 @@ export function WizardStep5_Resumen({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
               </svg>
-              Publicando...
+              Guardando borrador...
             </>
           ) : (
             <>
               <CheckCircle2 size={22} className="mr-2" />
-              {opcion === 'activo' ? 'Publicar Curso' : 'Guardar Borrador'}
+              Guardar Borrador
             </>
           )}
         </button>
@@ -304,21 +276,16 @@ export function WizardStep5_Resumen({
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
             <div className="flex items-center gap-4 mb-6">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                opcion === 'activo' ? 'bg-green-100' : 'bg-slate-100'
+                'bg-blue-50'
               }`}>
-                {opcion === 'activo'
-                  ? <CheckCircle2 size={24} className="text-green-600" />
-                  : <AlertCircle size={24} className="text-slate-600" />
-                }
+                <AlertCircle size={24} className="text-jc-blue" />
               </div>
               <div>
                 <h3 className="font-bold text-slate-800 text-lg">
-                  {opcion === 'activo' ? '¿Publicar curso ahora?' : '¿Guardar como borrador?'}
+                  ¿Guardar como borrador?
                 </h3>
                 <p className="text-sm text-slate-500 mt-0.5">
-                  {opcion === 'activo'
-                    ? 'El curso quedará disponible inmediatamente para inscripciones.'
-                    : 'Podrás publicarlo más tarde desde Gestión de Cursos.'}
+                  'Podrás publicarlo desde el detalle del curso cuando el relator haya subido los exámenes.'
                 </p>
               </div>
             </div>
@@ -340,13 +307,9 @@ export function WizardStep5_Resumen({
               </button>
               <button
                 onClick={handleConfirmarPublicacion}
-                className={`flex-1 py-3 text-white rounded-xl font-bold transition shadow-sm ${
-                  opcion === 'activo'
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : 'bg-slate-600 hover:bg-slate-700'
-                }`}
+                className="flex-1 py-3 text-white rounded-xl font-bold transition shadow-sm bg-jc-blue hover:bg-jc-blue-dark"
               >
-                {opcion === 'activo' ? 'Sí, publicar' : 'Sí, guardar borrador'}
+                Sí, guardar borrador
               </button>
             </div>
           </div>

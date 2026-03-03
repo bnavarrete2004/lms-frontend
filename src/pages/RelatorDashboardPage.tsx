@@ -53,11 +53,12 @@ export function RelatorDashboardPage() {
         const [mRes, cRes, eRes] = await Promise.all([
           api.get('/materiales/'),
           api.get('/cursos/'),
-          api.get('/intentos-evaluacion/pendientes-validacion/'),
+          api.get('/intentos-evaluacion/', { params: { estado: 'completado' } }),
         ]);
         setMateriales(mRes.data?.results || mRes.data || []);
         setCursos(cRes.data?.results || cRes.data || []);
-        setExamenesPendientes(eRes.data?.results || eRes.data || []);
+        const todos = eRes.data?.results || eRes.data || [];
+        setExamenesPendientes(todos.filter((i: any) => !i.validado_por_relator));
       } catch (error) {
         console.error('Error cargando datos de relator:', error);
       } finally {
@@ -70,7 +71,7 @@ export function RelatorDashboardPage() {
   const handleConfirmarExamen = async (intentoId: number) => {
     try {
       setConfirmando(intentoId);
-      await api.post(`/intentos-evaluacion/${intentoId}/confirmar-relator/`);
+      await api.patch(`/intentos-evaluacion/${intentoId}/`, { validado_por_relator: true });
       setExamenesPendientes(prev => prev.filter(e => e.id !== intentoId));
     } catch (err) {
       console.error('Error al confirmar examen:', err);
