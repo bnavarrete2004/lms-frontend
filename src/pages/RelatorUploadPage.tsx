@@ -1,5 +1,5 @@
 // src/pages/RelatorUploadPage.tsx
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FolderOpen, Upload, BookOpen, TrendingUp, Users,
@@ -17,14 +17,18 @@ import api from '@/api/axios';
 
 type Paso = 1 | 2 | 3 | 4;
 type TipoPregunta = 'alternativas' | 'verdadero_falso';
+type SubcategoriaExamen = 'intermedio' | 'final';
 
 interface Pregunta {
   id: string;
   tipo: TipoPregunta;
   enunciado: string;
-  opciones: string[];         // alternativas: 4 strings. V/F: fijo ['Verdadero','Falso']
-  respuesta_correcta: number; // índice de la opción correcta
+  opciones: string[];
+  respuesta_correcta: number;
 }
+
+interface ModuloOpcion { id: number; nombre: string; orden: number; }
+interface CursoOpcion  { id: number; nombre: string; }
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -33,6 +37,7 @@ const TIPOS_MATERIAL = [
   { id: 'pdf',          label: 'PDF / Guía',       icon: <FileText size={32} />,      color: 'bg-blue-100 text-blue-600',  desc: 'Documentos de lectura' },
   { id: 'presentacion', label: 'Presentación',     icon: <ClipboardList size={32} />, color: 'bg-amber-100 text-amber-600',desc: 'PDF exportado desde Canva, PowerPoint u otro' },
   { id: 'scorm',        label: 'Quiz Interactivo', icon: <CheckCircle2 size={32} />,  color: 'bg-green-100 text-green-600',desc: 'Preguntas con alternativas' },
+  { id: 'examen',       label: 'Examen',           icon: <ClipboardList size={32} />, color: 'bg-purple-100 text-purple-600', desc: 'Examen intermedio de módulo o final de curso' },
 ];
 
 function generarId() {
@@ -216,6 +221,14 @@ export function RelatorUploadPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [preguntas, setPreguntas] = useState<Pregunta[]>([nuevaPregunta()]);
 
+  // Estado extra para examen
+  const [subcategoriaExamen, setSubcategoriaExamen] = useState<SubcategoriaExamen | ''>('');
+  const [moduloDestinoId, setModuloDestinoId]       = useState<number | ''>('');
+  const [cursoDestinoId, setCursoDestinoId]         = useState<number | ''>('');
+  const [modulosDisponibles, setModulosDisponibles] = useState<ModuloOpcion[]>([]);
+  const [cursosDisponibles, setCursosDisponibles]   = useState<CursoOpcion[]>([]);
+  const [errorDestino, setErrorDestino]             = useState(''); // bloqueo unicidad
+
   const [formData, setFormData] = useState({
     nombre:      '',
     descripcion: '',
@@ -226,6 +239,20 @@ export function RelatorUploadPage() {
     file:        null as File | null,
   });
 
+  // Cargar módulos y cursos del relator cuando cambia subcategoría de examen
+  useEffect(() => {
+    if (formData.tipo !== 'examen') return;
+    if (subcategoriaExamen === 'intermedio') {
+      api.get('/modulos/').then(r => {
+        setModulosDisponibles(r.data?.results || r.data || []);
+      }).catch(() => {});
+    } else if (subcategoriaExamen === 'final') {
+      api.get('/cursos/').then(r => {
+        setCursosDisponibles(r.data?.results || r.data || []);
+      }).catch(() => {});
+    }
+  }, [subcategoriaExamen, formData.tipo]);
+
   const nextStep = () => setPaso(prev => Math.min(prev + 1, 4) as Paso);
   const prevStep = () => setPaso(prev => Math.max(prev - 1, 1) as Paso);
 
@@ -233,9 +260,26 @@ export function RelatorUploadPage() {
     if (e.target.files?.[0]) setFormData({ ...formData, file: e.target.files[0] });
   };
 
+  // La validación de unicidad ocurre en el backend al enviar.
+  // No hacemos consulta anticipada porque el queryset del relator
+  // no filtra por modulo_destino/curso_destino en los query params.
+  const verificarDestinoExamen = (_subcat: SubcategoriaExamen, _destinoId: number) => {
+    setErrorDestino('');
+  };
+
+  // Validación del paso 2 para examen
+  const paso2ValidoExamen = () => {
+    if (!formData.nombre) return false;
+    if (!subcategoriaExamen) return false;
+    if (subcategoriaExamen === 'intermedio' && !moduloDestinoId) return false;
+    if (subcategoriaExamen === 'final'      && !cursoDestinoId)  return false;
+    if (errorDestino) return false;
+    return true;
+  };
+
   // Validación del paso 3 según tipo
   const paso3Valido = () => {
-    if (formData.tipo === 'scorm') {
+    if (formData.tipo === 'scorm' || formData.tipo === 'examen') {
       return preguntas.length > 0 && preguntas.every(p =>
         p.enunciado.trim() !== '' &&
         (p.tipo === 'verdadero_falso' || p.opciones.every(o => o.trim() !== ''))
@@ -244,21 +288,34 @@ export function RelatorUploadPage() {
     return formData.file !== null;
   };
 
+  const [submitError, setSubmitError] = useState('');
+
   const handleSubmit = async () => {
     setIsUploading(true);
+    setSubmitError('');
     try {
       if (formData.tipo === 'scorm') {
-        // Quiz: enviar como JSON
         await api.post('/upload/material/', {
           tipo:        'scorm',
           nombre:      formData.nombre,
           descripcion: formData.descripcion,
           categoria:   formData.categoria,
           tags:        formData.tags,
-          preguntas:   preguntas.map(({ id: _id, ...p }) => p), // omitir id local
+          preguntas:   preguntas.map(({ id: _id, ...p }) => p),
+        });
+      } else if (formData.tipo === 'examen') {
+        await api.post('/upload/material/', {
+          tipo:               'examen',
+          nombre:             formData.nombre,
+          descripcion:        formData.descripcion,
+          categoria:          formData.categoria,
+          tags:               formData.tags,
+          subcategoria_examen: subcategoriaExamen,
+          modulo_destino:     subcategoriaExamen === 'intermedio' ? moduloDestinoId : undefined,
+          curso_destino:      subcategoriaExamen === 'final'      ? cursoDestinoId  : undefined,
+          preguntas:          preguntas.map(({ id: _id, ...p }) => p),
         });
       } else {
-        // Archivos: multipart
         const data = new FormData();
         if (formData.file) data.append('file', formData.file);
         data.append('tipo',        formData.tipo);
@@ -273,9 +330,9 @@ export function RelatorUploadPage() {
       }
       alert('✓ Contenido enviado a revisión.');
       navigate('/relator/materiales');
-    } catch (err) {
-      console.error(err);
-      alert('Error en la carga. Revisa los datos e intenta nuevamente.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Error en la carga. Revisa los datos e intenta nuevamente.';
+      setSubmitError(msg);
     } finally {
       setIsUploading(false);
     }
@@ -389,6 +446,100 @@ export function RelatorUploadPage() {
                 </div>
               )}
 
+              {/* ── Destino simbólico para exámenes ── */}
+              {formData.tipo === 'examen' && (
+                <div className="bg-purple-50 border border-purple-100 rounded-xl p-5 space-y-5">
+                  <div>
+                    <label className="block text-sm font-bold text-purple-800 mb-3">
+                      Tipo de examen *
+                    </label>
+                    <div className="grid grid-cols-2 gap-4">
+                      {[
+                        { val: 'intermedio', label: 'Examen Intermedio', desc: 'Asociado a un módulo específico', icon: '📋' },
+                        { val: 'final',      label: 'Examen Final',      desc: 'Evaluación final del curso completo', icon: '🎓' },
+                      ].map(opt => (
+                        <button
+                          key={opt.val}
+                          onClick={() => {
+                            setSubcategoriaExamen(opt.val as SubcategoriaExamen);
+                            setModuloDestinoId('');
+                            setCursoDestinoId('');
+                            setErrorDestino('');
+                          }}
+                          className={`p-4 rounded-xl border-2 text-left transition-all ${
+                            subcategoriaExamen === opt.val
+                              ? 'border-purple-500 bg-purple-100'
+                              : 'border-purple-200 hover:border-purple-300 bg-white'
+                          }`}
+                        >
+                          <div className="text-2xl mb-2">{opt.icon}</div>
+                          <p className="font-bold text-slate-800 text-sm">{opt.label}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">{opt.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Selector de módulo */}
+                  {subcategoriaExamen === 'intermedio' && (
+                    <div>
+                      <label className="block text-sm font-bold text-purple-800 mb-2">
+                        Módulo destino *
+                      </label>
+                      <select
+                        value={moduloDestinoId}
+                        onChange={e => {
+                          const val = Number(e.target.value);
+                          setModuloDestinoId(val);
+                          setErrorDestino('');
+                          if (val) verificarDestinoExamen('intermedio', val);
+                        }}
+                        className="w-full px-4 py-3 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-400/30 outline-none bg-white text-sm"
+                      >
+                        <option value="">— Selecciona un módulo —</option>
+                        {modulosDisponibles.map(m => (
+                          <option key={m.id} value={m.id}>
+                            Módulo {m.orden}: {m.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Selector de curso */}
+                  {subcategoriaExamen === 'final' && (
+                    <div>
+                      <label className="block text-sm font-bold text-purple-800 mb-2">
+                        Curso destino *
+                      </label>
+                      <select
+                        value={cursoDestinoId}
+                        onChange={e => {
+                          const val = Number(e.target.value);
+                          setCursoDestinoId(val);
+                          setErrorDestino('');
+                          if (val) verificarDestinoExamen('final', val);
+                        }}
+                        className="w-full px-4 py-3 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-400/30 outline-none bg-white text-sm"
+                      >
+                        <option value="">— Selecciona un curso —</option>
+                        {cursosDisponibles.map(c => (
+                          <option key={c.id} value={c.id}>{c.nombre}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Error de unicidad */}
+                  {errorDestino && (
+                    <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4">
+                      <AlertCircle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-red-700">{errorDestino}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Descripción</label>
                 <textarea
@@ -406,14 +557,30 @@ export function RelatorUploadPage() {
             </div>
           )}
 
-          {/* ── PASO 3: Archivo o Quiz ── */}
+          {/* ── PASO 3: Archivo, Quiz o Examen ── */}
           {paso === 3 && (
             <div className="animate-in fade-in duration-300">
-              {formData.tipo === 'scorm' ? (
+              {(formData.tipo === 'scorm' || formData.tipo === 'examen') ? (
                 <>
                   <div className="mb-6">
-                    <h2 className="text-2xl font-bold text-slate-800">Paso 3: Construir Quiz</h2>
-                    <p className="text-slate-500 mt-1">
+                    <h2 className="text-2xl font-bold text-slate-800">
+                      Paso 3: {formData.tipo === 'examen' ? 'Construir Examen' : 'Construir Quiz'}
+                    </h2>
+                    {formData.tipo === 'examen' && (
+                      <div className="mt-3 flex items-center gap-2 px-4 py-2.5 bg-purple-50 border border-purple-100 rounded-xl w-fit">
+                        <span className="text-purple-600 text-sm font-bold">
+                          {subcategoriaExamen === 'intermedio' ? '📋 Examen Intermedio' : '🎓 Examen Final'}
+                        </span>
+                        <span className="text-slate-400 text-xs">—</span>
+                        <span className="text-slate-600 text-xs">
+                          {subcategoriaExamen === 'intermedio'
+                            ? modulosDisponibles.find(m => m.id === moduloDestinoId)?.nombre || `Módulo #${moduloDestinoId}`
+                            : cursosDisponibles.find(c => c.id === cursoDestinoId)?.nombre || `Curso #${cursoDestinoId}`
+                          }
+                        </span>
+                      </div>
+                    )}
+                    <p className="text-slate-500 mt-2">
                       Agrega las preguntas. Haz clic en el círculo de cada opción para marcarla como correcta.
                     </p>
                   </div>
@@ -469,20 +636,40 @@ export function RelatorUploadPage() {
             <div className="animate-in fade-in duration-300 space-y-6">
               <h2 className="text-2xl font-bold text-slate-800">Paso 4: Resumen Final</h2>
               <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 space-y-4">
-                <SummaryItem label="Formato"  value={formData.tipo === 'scorm' ? 'QUIZ INTERACTIVO' : formData.tipo.toUpperCase()} />
-                <SummaryItem label="Nombre"   value={formData.nombre} />
+                <SummaryItem
+                  label="Formato"
+                  value={
+                    formData.tipo === 'scorm'  ? 'QUIZ INTERACTIVO' :
+                    formData.tipo === 'examen' ? `EXAMEN — ${subcategoriaExamen === 'intermedio' ? 'INTERMEDIO' : 'FINAL'}` :
+                    formData.tipo.toUpperCase()
+                  }
+                />
+                <SummaryItem label="Nombre" value={formData.nombre} />
                 {formData.tipo === 'video' && <SummaryItem label="URL YouTube" value={formData.video_url} />}
-                {formData.tipo === 'scorm' ? (
+
+                {/* Destino del examen */}
+                {formData.tipo === 'examen' && (
+                  <SummaryItem
+                    label={subcategoriaExamen === 'intermedio' ? 'Módulo destino' : 'Curso destino'}
+                    value={
+                      subcategoriaExamen === 'intermedio'
+                        ? (modulosDisponibles.find(m => m.id === moduloDestinoId)?.nombre || `ID ${moduloDestinoId}`)
+                        : (cursosDisponibles.find(c => c.id === cursoDestinoId)?.nombre   || `ID ${cursoDestinoId}`)
+                    }
+                  />
+                )}
+
+                {(formData.tipo === 'scorm' || formData.tipo === 'examen') ? (
                   <SummaryItem label="Preguntas" value={`${preguntas.length} pregunta${preguntas.length !== 1 ? 's' : ''}`} />
                 ) : (
                   <SummaryItem label="Archivo / Miniatura" value={formData.file?.name || '---'} />
                 )}
               </div>
 
-              {/* Preview preguntas del quiz */}
-              {formData.tipo === 'scorm' && (
+              {/* Preview preguntas del quiz/examen */}
+              {(formData.tipo === 'scorm' || formData.tipo === 'examen') && (
                 <div className="space-y-3">
-                  <p className="text-sm font-semibold text-slate-600">Vista previa del quiz:</p>
+                  <p className="text-sm font-semibold text-slate-600">Vista previa de preguntas:</p>
                   {preguntas.map((p, idx) => (
                     <div key={p.id} className="bg-white border border-slate-200 rounded-xl p-4">
                       <div className="flex items-center gap-2 mb-2">
@@ -518,6 +705,13 @@ export function RelatorUploadPage() {
                   Tu material quedará en estado de revisión. Te notificaremos una vez que el administrador lo valide para su uso en cursos.
                 </p>
               </div>
+
+              {submitError && (
+                <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4">
+                  <AlertCircle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-700 font-medium">{submitError}</p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -533,7 +727,8 @@ export function RelatorUploadPage() {
               onClick={nextStep}
               disabled={
                 (paso === 1 && !formData.tipo) ||
-                (paso === 2 && (!formData.nombre || (formData.tipo === 'video' && !formData.video_url))) ||
+                (paso === 2 && formData.tipo !== 'examen' && (!formData.nombre || (formData.tipo === 'video' && !formData.video_url))) ||
+                (paso === 2 && formData.tipo === 'examen' && !paso2ValidoExamen()) ||
                 (paso === 3 && !paso3Valido())
               }
             >

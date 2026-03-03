@@ -1,20 +1,33 @@
 // src/pages/CourseDetailPage.tsx
 // BASADO EN MOCKUP HTML - vista_curso.html
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { cursoService, type Curso } from '@/api/services/cursoService';
 import { moduloService, type Modulo } from '@/api/services/moduloService';
 import { leccionService, type Leccion } from '@/api/services/leccionService';
 import progresoService, { type ProgresoModulo } from '@/api/services/progresoService';
-import { inscripcionService } from '@/api/services/inscripcionService';
+import { inscripcionService, type Inscripcion } from '@/api/services/inscripcionService';
+import api from '@/api/axios';
 
 
 // Tipos de estado del módulo
 type EstadoModulo = 'completado' | 'en_progreso' | 'bloqueado';
+
+// Estado del examen final para las cards de cierre
+interface EstadoCierre {
+  examenFinalId: number | null;       // ID de la evaluación tipo 'final'
+  intentoFinalId: number | null;      // ID del último intento del examen final
+  examenRendido: boolean;             // Estudiante entregó el examen
+  examenValidado: boolean;            // Admin liberó la nota
+  examenAprobado: boolean | null;     // null = aún no validado
+  encuestaHecha: boolean;             // Estudiante completó la encuesta
+  diplomaUrl: string | null;          // URL del diploma (si ya fue generado)
+}
 
 interface ModuloConEstado extends Modulo {
   estado: EstadoModulo;
@@ -33,8 +46,20 @@ export function CourseDetailPage() {
 
   const [curso, setCurso] = useState<Curso | null>(null);
   const [modulos, setModulos] = useState<ModuloConEstado[]>([]);
+  const [inscripcion, setInscripcion] = useState<Inscripcion | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Estado de las cards de cierre de curso
+  const [cierre, setCierre] = useState<EstadoCierre>({
+    examenFinalId: null,
+    intentoFinalId: null,
+    examenRendido: false,
+    examenValidado: false,
+    examenAprobado: null,
+    encuestaHecha: false,
+    diplomaUrl: null,
+  });
 
   // Configuración del sidebar - EXACTO DEL MOCKUP
   const sidebarSections = [
@@ -131,12 +156,13 @@ export function CourseDetailPage() {
 
         // 3. Obtener inscripción del estudiante para este curso
         const inscripciones = await inscripcionService.filter({ curso: id });
-        const inscripcion = inscripciones[0]; // La inscripción del usuario actual
+        const inscripcionActual = inscripciones[0];
+        setInscripcion(inscripcionActual ?? null);
 
         // 4. Obtener progresos reales del backend (si hay inscripción)
         let progresos: ProgresoModulo[] = [];
-        if (inscripcion) {
-          progresos = await progresoService.getProgresoInscripcion(inscripcion.id);
+        if (inscripcionActual) {
+          progresos = await progresoService.getProgresoInscripcion(inscripcionActual.id);
         }
 
         // 5. Enriquecer módulos con información de lecciones y progreso REAL
@@ -162,11 +188,9 @@ export function CourseDetailPage() {
               } else if (progreso > 0) {
                 estado = 'en_progreso';
               } else {
-                // Bloqueado si el módulo anterior no está completado
-                // El primer módulo siempre está disponible
                 const esElPrimero = modulo.orden === 1;
                 if (esElPrimero) {
-                  estado = 'en_progreso'; // Disponible pero sin empezar
+                  estado = 'en_progreso';
                 } else {
                   const moduloAnteriorIndex = modulosData.findIndex(m => m.id === modulo.id) - 1;
                   const moduloAnterior = modulosData[moduloAnteriorIndex];
@@ -202,6 +226,12 @@ export function CourseDetailPage() {
         );
 
         setModulos(modulosConEstado);
+
+        // 6. Cargar estado de cierre de curso (examen final, encuesta, diploma)
+        if (inscripcionActual) {
+          await cargarEstadoCierre(parseInt(id), inscripcionActual);
+        }
+
       } catch (err: any) {
         console.error('Error al cargar datos del curso:', err);
         setError(err.message || 'Error al cargar el curso');
@@ -212,6 +242,71 @@ export function CourseDetailPage() {
 
     fetchCourseData();
   }, [id]);
+
+  // Carga el estado de las cards de cierre: examen final, encuesta, diploma
+  const cargarEstadoCierre = useCallback(async (cursoId: number, insc: Inscripcion) => {
+    try {
+      // Buscar evaluación de tipo 'final' del curso
+      const evalRes = await api.get('/evaluaciones/', { params: { curso: cursoId, tipo: 'final' } });
+      const evaluaciones = evalRes.data?.results || evalRes.data || [];
+      const examenFinal = evaluaciones[0] ?? null;
+
+      if (!examenFinal) {
+        // El curso no tiene examen final configurado → no mostrar sección de cierre
+        return;
+      }
+
+      // Buscar intentos del estudiante en ese examen
+      const intentosRes = await api.get('/intentos-evaluacion/', {
+        params: { evaluacion: examenFinal.id }
+      });
+      const intentos: any[] = intentosRes.data?.results || intentosRes.data || [];
+      // Tomar el intento más reciente completado
+      const intentoFinal = intentos
+        .filter((i: any) => i.estado === 'completado')
+        .sort((a: any, b: any) => new Date(b.fecha_fin).getTime() - new Date(a.fecha_fin).getTime())[0] ?? null;
+
+      const examenRendido = !!intentoFinal;
+      // nota_obtenida es null cuando el serializer la oculta (no validada aún)
+      const examenValidado = examenRendido && intentoFinal.nota_obtenida !== null;
+      const examenAprobado = examenValidado ? (intentoFinal.aprobado ?? null) : null;
+
+      // Verificar si hay encuesta respondida para esta inscripción
+      const encuestaRes = await api.get('/respuestas-encuesta/', {
+        params: { inscripcion: insc.id }
+      }).catch(() => ({ data: [] }));
+      const respuestasEncuesta = encuestaRes.data?.results || encuestaRes.data || [];
+      const encuestaHecha = respuestasEncuesta.length > 0;
+
+      // Diploma
+      const diplomaUrl = (insc as any).diploma_url ?? null;
+
+      setCierre({
+        examenFinalId: examenFinal.id,
+        intentoFinalId: intentoFinal?.id ?? null,
+        examenRendido,
+        examenValidado,
+        examenAprobado,
+        encuestaHecha,
+        diplomaUrl,
+      });
+    } catch (err) {
+      console.error('Error al cargar estado de cierre:', err);
+    }
+  }, []);
+
+  const handleIrAExamen = () => {
+    if (cierre.examenFinalId && id) {
+      navigate(`/student/courses/${id}/examen/${cierre.examenFinalId}`);
+    }
+  };
+
+  const handleEncuestaEnviada = async () => {
+    // Refrescar el estado de cierre tras enviar la encuesta
+    if (inscripcion && id) {
+      await cargarEstadoCierre(parseInt(id), inscripcion);
+    }
+  };
 
   // Función para obtener clases CSS según el estado del módulo
   const getModuleStateClasses = (estado: EstadoModulo) => {
@@ -546,6 +641,159 @@ export function CourseDetailPage() {
         )}
       </div>
 
+      {/* SECCIÓN DE CIERRE DE CURSO — Se muestra solo cuando todos los módulos están al 100% y hay examen final */}
+      {progresoGeneral === 100 && cierre.examenFinalId && (
+        <div className="mt-12 space-y-5 border-t-2 border-dashed border-slate-200 pt-10">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-slate-800">Certificación Final</h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Has completado todos los módulos. Sigue los pasos para obtener tu diploma.
+            </p>
+          </div>
+
+          {/* ── Card 1: Examen Final ── */}
+          <div className={`bg-white rounded-xl border-2 transition-all shadow-sm ${
+            !cierre.examenRendido ? 'border-[#064D91]' : 'border-slate-200'
+          }`}>
+            <div className="p-6 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                {/* Número de paso */}
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                  cierre.examenRendido ? 'bg-green-500 text-white' : 'bg-[#064D91] text-white'
+                }`}>
+                  {cierre.examenRendido ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : '1'}
+                </div>
+                <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-[#064D91]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-slate-800">Examen Final de Competencias</h3>
+                  <p className="text-sm text-slate-500">Evaluación obligatoria para certificación SENCE</p>
+                </div>
+              </div>
+
+              <div className="flex-shrink-0">
+                {!cierre.examenRendido && (
+                  <Button onClick={handleIrAExamen}>
+                    Rendir Examen
+                  </Button>
+                )}
+                {cierre.examenRendido && !cierre.examenValidado && (
+                  <div className="text-right">
+                    <Badge variant="warning">Esperando validación</Badge>
+                    <p className="text-xs text-slate-400 mt-1">La institución está revisando tu examen</p>
+                  </div>
+                )}
+                {cierre.examenValidado && cierre.examenAprobado === true && (
+                  <Badge variant="success">Aprobado ✓</Badge>
+                )}
+                {cierre.examenValidado && cierre.examenAprobado === false && (
+                  <div className="text-right">
+                    <Badge variant="danger">No aprobado</Badge>
+                    <p className="text-xs text-slate-400 mt-1">Contacta a tu relator</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Card 2: Encuesta de Satisfacción — visible solo si examen aprobado ── */}
+          {cierre.examenValidado && cierre.examenAprobado && (
+            <div className={`bg-white rounded-xl border-2 transition-all shadow-sm ${
+              !cierre.encuestaHecha ? 'border-[#52A9B7]' : 'border-slate-200'
+            }`}>
+              <div className="p-6 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                    cierre.encuestaHecha ? 'bg-green-500 text-white' : 'bg-[#52A9B7] text-white'
+                  }`}>
+                    {cierre.encuestaHecha ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : '2'}
+                  </div>
+                  <div className="w-12 h-12 bg-cyan-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6 text-[#52A9B7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg text-slate-800">Encuesta de Satisfacción</h3>
+                    <p className="text-sm text-slate-500">Tu opinión es fundamental para nuestra mejora continua</p>
+                  </div>
+                </div>
+
+                <div className="flex-shrink-0">
+                  {!cierre.encuestaHecha ? (
+                    <ModalEncuesta
+                      inscripcionId={inscripcion!.id}
+                      onEnviada={handleEncuestaEnviada}
+                    />
+                  ) : (
+                    <Badge variant="success">Completada ✓</Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Card 3: Diploma — visible solo si encuesta completada ── */}
+          {cierre.encuestaHecha && (
+            <div className="bg-gradient-to-r from-[#064D91] via-[#088395] to-[#06B6D4] rounded-xl p-8 text-white shadow-xl">
+              <div className="flex items-center justify-between gap-6">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">3</div>
+                    <span className="text-white/70 text-sm font-semibold uppercase tracking-wider">Último paso</span>
+                  </div>
+                  <h3 className="text-2xl font-bold mb-1">
+                    ¡Felicitaciones, {user?.nombre || user?.nombre_completo}!
+                  </h3>
+                  <p className="text-white/80">
+                    Has cumplido todos los requisitos. Tu diploma está listo para descargar.
+                  </p>
+                </div>
+
+                {cierre.diplomaUrl ? (
+                  <a
+                    href={cierre.diplomaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-shrink-0 flex items-center gap-2 bg-white text-[#064D91] font-bold px-8 py-4 rounded-xl hover:bg-blue-50 transition-colors text-base shadow-lg"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Descargar Diploma
+                  </a>
+                ) : (
+                  <div className="flex-shrink-0 text-right">
+                    <div className="flex items-center gap-2 bg-white/20 text-white font-semibold px-6 py-3 rounded-xl text-sm">
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      </svg>
+                      Generando diploma...
+                    </div>
+                    <p className="text-white/60 text-xs mt-1">La institución lo procesará pronto</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* RECURSOS ADICIONALES - DISEÑO DEL MOCKUP */}
       <div className="mt-10 bg-blue-50 rounded-xl p-6 border border-blue-100">
         <h3 className="text-lg font-bold text-slate-800 mb-4">Recursos adicionales del curso</h3>
@@ -595,5 +843,138 @@ export function CourseDetailPage() {
         </button>
       </div>
     </MainLayout>
+  );
+}
+
+// ── Componente ModalEncuesta ──────────────────────────────────────────────────
+// Formulario inline sencillo. Cuando haya un endpoint de encuestas real
+// solo hay que apuntar el POST al endpoint correcto.
+
+interface ModalEncuestaProps {
+  inscripcionId: number;
+  onEnviada: () => void;
+}
+
+function ModalEncuesta({ inscripcionId, onEnviada }: ModalEncuestaProps) {
+  const [abierto, setAbierto] = useState(false);
+  const [comentario, setComentario] = useState('');
+  const [enviando, setEnviando] = useState(false);
+
+  const preguntas = [
+    '¿Cómo calificarías el contenido del curso?',
+    '¿Cómo calificarías la metodología del relator?',
+    '¿Recomendarías este curso a un colega?',
+  ];
+  const [respuestas, setRespuestas] = useState<number[]>([0, 0, 0]);
+
+  const handleEnviar = async () => {
+    if (respuestas.some(r => r === 0)) {
+      alert('Por favor responde todas las preguntas antes de enviar.');
+      return;
+    }
+    try {
+      setEnviando(true);
+      await api.post('/respuestas-encuesta/', {
+        inscripcion: inscripcionId,
+        calificacion_general: Math.round(respuestas.reduce((a, b) => a + b, 0) / respuestas.length),
+        respuestas_json: JSON.stringify(respuestas),
+        comentarios: comentario,
+      });
+      setAbierto(false);
+      onEnviada();
+    } catch (err) {
+      console.error('Error al enviar encuesta:', err);
+      // Marcamos como hecha localmente para no bloquear al estudiante
+      // si el endpoint aún no existe. Remover cuando esté listo.
+      setAbierto(false);
+      onEnviada();
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <>
+      <Button onClick={() => setAbierto(true)}>
+        Responder Encuesta
+      </Button>
+
+      {abierto && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">Encuesta de Satisfacción</h3>
+                <p className="text-sm text-slate-500">Solo tomará 2 minutos</p>
+              </div>
+              <button onClick={() => setAbierto(false)} className="text-slate-400 hover:text-slate-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Preguntas */}
+            <div className="p-6 space-y-6">
+              {preguntas.map((pregunta, idx) => (
+                <div key={idx}>
+                  <p className="text-sm font-semibold text-slate-700 mb-3">{pregunta}</p>
+                  <div className="flex gap-2 items-center">
+                    {[1, 2, 3, 4, 5].map((val) => (
+                      <button
+                        key={val}
+                        onClick={() => {
+                          const nuevas = [...respuestas];
+                          nuevas[idx] = val;
+                          setRespuestas(nuevas);
+                        }}
+                        className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${
+                          respuestas[idx] === val
+                            ? 'bg-[#064D91] text-white shadow-md scale-105'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {val}
+                      </button>
+                    ))}
+                    {respuestas[idx] > 0 && (
+                      <span className="text-xs text-slate-400 ml-1">
+                        {['', 'Muy malo', 'Malo', 'Regular', 'Bueno', 'Excelente'][respuestas[idx]]}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {/* Comentario libre */}
+              <div>
+                <p className="text-sm font-semibold text-slate-700 mb-2">Comentarios adicionales (opcional)</p>
+                <textarea
+                  value={comentario}
+                  onChange={(e) => setComentario(e.target.value)}
+                  placeholder="¿Qué mejorarías del curso?"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#064D91] resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Acciones */}
+            <div className="flex gap-3 p-6 border-t border-slate-100">
+              <button
+                onClick={() => setAbierto(false)}
+                className="flex-1 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <Button onClick={handleEnviar} isLoading={enviando} className="flex-1">
+                Enviar Encuesta
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

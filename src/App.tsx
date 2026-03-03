@@ -14,6 +14,7 @@ import { CourseDetailPage } from '@/pages/CourseDetailPage';
 import { LessonPage } from '@/pages/LessonPage'; // <--- YA SE USA ABAJO
 import { StudentCoursesPage } from '@/pages/StudentCoursesPage';
 import { StudentProgressPage } from '@/pages/StudentProgressPage';
+import { ExamenPage } from '@/pages/ExamenPage';
 
 // --- PÁGINAS RELATOR ---
 import { RelatorDashboardPage } from '@/pages/RelatorDashboardPage';
@@ -79,6 +80,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['estudiante']}>
                 <LessonPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/courses/:id/examen/:evaluacionId"
+            element={
+              <ProtectedRoute allowedRoles={['estudiante']}>
+                <ExamenPage />
               </ProtectedRoute>
             }
           />

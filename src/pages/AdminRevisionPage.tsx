@@ -24,14 +24,20 @@ interface Material {
   id: number;
   nombre: string;
   descripcion: string;
-  tipo: string;           // 'video' | 'pdf' | 'presentacion' | 'scorm'
-  archivo_url: string;    // URL del archivo o link YouTube
+  tipo: string;
+  archivo_url: string;
   archivo_size?: number;
   created_at: string;
   estado: 'pendiente' | 'aprobado' | 'rechazado';
   relator_autor_nombre?: string;
   categoria?: string;
-  preguntas?: Pregunta[]; // Solo para tipo 'scorm'
+  preguntas?: Pregunta[];
+  // Campos de examen
+  subcategoria_examen?: 'intermedio' | 'final';
+  modulo_destino?: number;
+  modulo_destino_nombre?: string;
+  curso_destino?: number;
+  curso_destino_nombre?: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -44,10 +50,11 @@ function getYoutubeEmbedUrl(url: string): string | null {
 
 function getFileIcon(tipo: string) {
   switch (tipo) {
-    case 'video':        return <Video       className="text-red-600"    size={28} />;
-    case 'pdf':          return <FileType    className="text-blue-600"   size={28} />;
+    case 'video':        return <Video        className="text-red-600"    size={28} />;
+    case 'pdf':          return <FileType     className="text-blue-600"   size={28} />;
     case 'presentacion': return <ClipboardList className="text-amber-600" size={28} />;
-    default:             return <CheckCircle2 className="text-green-600" size={28} />;
+    case 'examen':       return <ClipboardList className="text-purple-600" size={28} />;
+    default:             return <CheckCircle2  className="text-green-600" size={28} />;
   }
 }
 
@@ -56,6 +63,7 @@ function getTipoBadgeColor(tipo: string) {
     case 'video':        return 'bg-red-100 text-red-700';
     case 'pdf':          return 'bg-blue-100 text-blue-700';
     case 'presentacion': return 'bg-amber-100 text-amber-700';
+    case 'examen':       return 'bg-purple-100 text-purple-700';
     default:             return 'bg-green-100 text-green-700';
   }
 }
@@ -66,6 +74,7 @@ function getTipoLabel(tipo: string) {
     case 'pdf':          return 'PDF / Guía';
     case 'presentacion': return 'Presentación';
     case 'scorm':        return 'Quiz Interactivo';
+    case 'examen':       return 'Examen';
     default:             return tipo.toUpperCase();
   }
 }
@@ -143,6 +152,96 @@ function PreviewModal({ material, onClose }: { material: Material; onClose: () =
         );
       }
 
+
+      // ── EXAMEN ──
+      case 'examen': {
+        let preguntas: any[] = [];
+        try {
+          preguntas = typeof material.preguntas === 'string'
+            ? JSON.parse(material.preguntas)
+            : (material.preguntas || []);
+        } catch { preguntas = []; }
+
+        const destino = material.subcategoria_examen === 'intermedio'
+          ? `Módulo: ${material.modulo_destino_nombre || `#${material.modulo_destino}`}`
+          : material.subcategoria_examen === 'final'
+          ? `Curso: ${material.curso_destino_nombre || `#${material.curso_destino}`}`
+          : null;
+
+        return (
+          <div className="space-y-5">
+            {/* Píldora de destino */}
+            {destino && (
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-purple-50 border border-purple-100 rounded-xl w-fit">
+                <span className="text-purple-600 font-bold text-sm">
+                  {material.subcategoria_examen === 'intermedio' ? '📋 Examen Intermedio' : '🎓 Examen Final'}
+                </span>
+                <span className="text-slate-400 text-xs">—</span>
+                <span className="text-slate-600 text-xs font-medium">{destino}</span>
+              </div>
+            )}
+
+            {preguntas.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-48 gap-3 text-slate-400">
+                <ClipboardList size={48} className="opacity-30" />
+                <p className="text-sm">Este examen no tiene preguntas cargadas.</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    Pregunta {preguntaActual + 1} de {preguntas.length}
+                  </span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${preguntas[preguntaActual].tipo === 'verdadero_falso' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
+                    {preguntas[preguntaActual].tipo === 'verdadero_falso' ? 'V / F' : 'A/B/C/D'}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-1.5">
+                  <div className="bg-purple-500 h-1.5 rounded-full transition-all duration-300"
+                    style={{ width: `${((preguntaActual + 1) / preguntas.length) * 100}%` }} />
+                </div>
+                <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
+                  <p className="text-base font-semibold text-slate-800 leading-relaxed">
+                    {preguntas[preguntaActual].enunciado}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {preguntas[preguntaActual].opciones.map((opcion: string, oidx: number) => {
+                    const esCorrecta = preguntas[preguntaActual].respuesta_correcta === oidx;
+                    const etiqueta = preguntas[preguntaActual].tipo === 'verdadero_falso'
+                      ? (oidx === 0 ? 'V' : 'F') : ['A','B','C','D'][oidx];
+                    return (
+                      <div key={oidx} className={`flex items-center gap-3 p-3.5 rounded-xl border-2 ${esCorrecta ? 'border-green-400 bg-green-50' : 'border-slate-200 bg-white'}`}>
+                        <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${esCorrecta ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                          {etiqueta}
+                        </span>
+                        <span className={`text-sm ${esCorrecta ? 'font-semibold text-green-800' : 'text-slate-700'}`}>{opcion}</span>
+                        {esCorrecta && <span className="ml-auto text-[10px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">Correcta</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center justify-between pt-2">
+                  <button onClick={() => setPreguntaActual(p => Math.max(0, p - 1))} disabled={preguntaActual === 0}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-semibold hover:bg-slate-200 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                    <ChevronLeft size={16} /> Anterior
+                  </button>
+                  <div className="flex gap-1.5">
+                    {preguntas.map((_: any, i: number) => (
+                      <button key={i} onClick={() => setPreguntaActual(i)}
+                        className={`w-2 h-2 rounded-full transition ${i === preguntaActual ? 'bg-purple-500' : 'bg-slate-200 hover:bg-slate-300'}`} />
+                    ))}
+                  </div>
+                  <button onClick={() => setPreguntaActual(p => Math.min(preguntas.length - 1, p + 1))} disabled={preguntaActual === preguntas.length - 1}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-semibold hover:bg-slate-200 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                    Siguiente <ChevronRight size={16} />
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        );
+      }
 
       // ── QUIZ / SCORM ──
       case 'scorm': {
@@ -445,6 +544,14 @@ export function AdminRevisionPage() {
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getTipoBadgeColor(m.tipo)}`}>
                               {getTipoLabel(m.tipo)}
                             </span>
+                            {m.tipo === 'examen' && m.subcategoria_examen && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-100">
+                                {m.subcategoria_examen === 'intermedio'
+                                  ? `📋 Módulo: ${m.modulo_destino_nombre || `#${m.modulo_destino}`}`
+                                  : `🎓 Curso: ${m.curso_destino_nombre || `#${m.curso_destino}`}`
+                                }
+                              </span>
+                            )}
                             <span className="text-xs text-slate-400">
                               ID: #{m.id} {m.archivo_size ? `• ${(m.archivo_size / 1024 / 1024).toFixed(1)} MB` : ''}
                             </span>

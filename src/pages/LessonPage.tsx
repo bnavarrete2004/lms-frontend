@@ -313,7 +313,7 @@ function PdfStep({ step, onNext, onBack }: any) {
   );
 }
 
-// ── Presentación (Visor optimizado con Pre-renderizado) ────────────────────────
+// ── Presentación (Visor Optimizado - Blanco/Slate/JC-Blue) ────────────────────
 
 function PresentacionStep({ step, onNext, onBack }: any) {
   const [numPages, setNumPages]       = useState<number | null>(null);
@@ -342,7 +342,6 @@ function PresentacionStep({ step, onNext, onBack }: any) {
   const esPrimera = slideActual === 1;
   const esUltima  = slideActual === (numPages ?? 1);
 
-  // Helper para renderizar páginas ocultas/visibles (Ventana Deslizante)
   const renderSlide = (pageNo: number, isVisible: boolean) => (
     <div key={`page-${pageNo}`} style={{ display: isVisible ? 'block' : 'none' }}>
       <Page
@@ -352,45 +351,46 @@ function PresentacionStep({ step, onNext, onBack }: any) {
         renderTextLayer={false}
         renderAnnotationLayer={false}
         loading=""
+        className="shadow-md"
       />
     </div>
   );
 
   return (
     <div className="space-y-4">
-      <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-2xl">
+      <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
         
-        {/* Header (Fiel al original) */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-700">
+        {/* Header - Limpio con acento jc-blue */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/50">
           <div className="flex items-center gap-2">
-            <Presentation size={16} className="text-amber-400" />
-            <span className="font-semibold text-slate-200 text-sm">{step.title}</span>
+            <Presentation size={18} className="text-jc-blue" />
+            <span className="font-bold text-slate-700 text-sm">{step.title}</span>
           </div>
           <div className="flex items-center gap-3">
             {numPages && (
-              <span className="text-xs font-bold text-slate-400">
+              <span className="text-xs font-bold text-slate-500 bg-white px-2 py-1 rounded border border-slate-200">
                 {slideActual} / {numPages}
               </span>
             )}
             <a href={step.data.url} target="_blank" rel="noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold hover:bg-slate-600 transition">
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-slate-600 border border-slate-200 rounded-lg text-xs font-semibold hover:bg-slate-50 transition shadow-sm">
               <ExternalLink size={12} /> Descargar
             </a>
           </div>
         </div>
 
-        {/* Slide area con Pre-renderizado */}
-        <div ref={containerRef} className="relative flex items-center justify-center bg-slate-800"
+        {/* Slide area con Pre-renderizado instantáneo */}
+        <div ref={containerRef} className="relative flex items-center justify-center bg-slate-100/50"
           style={{ height: loadError ? 300 : slideHeight }}>
 
           <button onClick={irAnterior} disabled={esPrimera}
-            className="absolute left-3 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center disabled:opacity-20 transition">
-            <ChevronLeft size={22} />
+            className="absolute left-4 z-20 w-11 h-11 rounded-full bg-white shadow-xl text-slate-400 hover:text-jc-blue disabled:opacity-0 transition-all flex items-center justify-center border border-slate-100">
+            <ChevronLeft size={24} />
           </button>
 
           {loadError ? (
             <div className="flex flex-col items-center justify-center gap-4 text-slate-400">
-              <Presentation size={48} className="opacity-30" />
+              <Presentation size={48} className="opacity-20" />
               <p className="text-sm italic">No se pudo cargar la presentación.</p>
             </div>
           ) : (
@@ -400,18 +400,15 @@ function PresentacionStep({ step, onNext, onBack }: any) {
               onLoadError={() => setLoadError(true)}
               loading={
                 <div className="flex items-center gap-3 text-slate-400">
-                  <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm">Preparando presentación...</span>
+                  <div className="w-5 h-5 border-2 border-jc-blue border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm font-medium">Preparando diapositivas...</span>
                 </div>
               }
             >
               {numPages && (
                 <>
-                  {/* Pre-render anterior */}
                   {slideActual > 1 && renderSlide(slideActual - 1, false)}
-                  {/* Slide actual */}
                   {renderSlide(slideActual, true)}
-                  {/* Pre-render siguiente */}
                   {slideActual < numPages && renderSlide(slideActual + 1, false)}
                 </>
               )}
@@ -419,32 +416,37 @@ function PresentacionStep({ step, onNext, onBack }: any) {
           )}
 
           <button onClick={irSiguiente} disabled={esUltima}
-            className="absolute right-3 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center disabled:opacity-20 transition">
-            <ChevronRight size={22} />
+            className="absolute right-4 z-20 w-11 h-11 rounded-full bg-white shadow-xl text-slate-400 hover:text-jc-blue disabled:opacity-0 transition-all flex items-center justify-center border border-slate-100">
+            <ChevronRight size={24} />
           </button>
         </div>
 
-        {/* Barra de progreso (Fiel al original) */}
+        {/* Barra de progreso inferior en jc-blue */}
         {numPages && (
-          <div className="px-5 py-3 bg-slate-900 flex items-center gap-3">
-            <div className="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden">
-              <div className="h-1 bg-amber-400 rounded-full transition-all duration-300"
+          <div className="px-5 py-3 bg-white border-t border-slate-100 flex items-center gap-4">
+            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full bg-jc-blue rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${(slideActual / numPages) * 100}%` }} />
             </div>
-            <span className="text-[11px] text-slate-500 font-semibold whitespace-nowrap">
-              {Math.round((slideActual / numPages) * 100)}%
+            <span className="text-[11px] text-slate-400 font-bold tabular-nums">
+              {Math.round((slideActual / numPages) * 100)}% COMPLETADO
             </span>
           </div>
         )}
       </div>
 
-      <p className="text-center text-xs text-slate-400">Usa las flechas ← → para navegar instantáneamente</p>
+      <div className="flex items-center justify-center gap-2 text-slate-400">
+        <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-[10px] font-bold">←</kbd>
+        <span className="text-[10px] font-bold uppercase tracking-wider">Navega con el teclado</span>
+        <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-[10px] font-bold">→</kbd>
+      </div>
+
       <NavBar title="" subtitle="" onBack={onBack} onNext={onNext} labelNext="Continuar con la lección" />
     </div>
   );
 }
 
-// ── Quiz / SCORM (Fiel al original) ───────────────────────────────────────────
+// ── Quiz / SCORM ──────────────────────────────────────────────────────────────
 
 function QuizStep({ step, onNext }: any) {
   const preguntasRaw = step.data.preguntas;
