@@ -36,7 +36,8 @@ interface ModuloConEstado extends Modulo {
   totalVideos: number;
   totalGuias: number;
   totalEvaluaciones: number;
-  lecciones?: Leccion[]; // ← Agregar lecciones
+  examenIntermedioId: number | null;
+  lecciones?: Leccion[];
 }
 
 export function CourseDetailPage() {
@@ -166,6 +167,10 @@ export function CourseDetailPage() {
         }
 
         // 5. Enriquecer módulos con información de lecciones y progreso REAL
+        // Cargar evaluaciones de todos los módulos en una sola llamada
+        const evalRes = await api.get('/evaluaciones/', { params: { tipo: 'sumativa' } });
+        const todasEvaluaciones = evalRes.data?.results || evalRes.data || [];
+
         const modulosConEstado = await Promise.all(
           modulosData.map(async (modulo) => {
             try {
@@ -174,7 +179,11 @@ export function CourseDetailPage() {
               const totalLecciones = lecciones.length;
               const totalVideos = lecciones.filter(l => l.tipo === 'teorica' || l.tipo === 'mixta').length;
               const totalGuias  = lecciones.filter(l => l.tipo === 'practica').length;
-              const totalEvaluaciones = 1;
+
+              // Evaluaciones intermedias reales asignadas a este módulo
+              const evalModulo = todasEvaluaciones.filter((e: any) => e.modulo === modulo.id);
+              const totalEvaluaciones = evalModulo.length;
+              const examenIntermedioId = evalModulo[0]?.id ?? null;
 
               // Buscar el progreso REAL de este módulo
               const progresoModulo = progresos.find(p => p.modulo === modulo.id);
@@ -207,6 +216,7 @@ export function CourseDetailPage() {
                 totalVideos,
                 totalGuias,
                 totalEvaluaciones,
+                examenIntermedioId,
                 lecciones,
               };
             } catch (err) {
@@ -219,6 +229,7 @@ export function CourseDetailPage() {
                 totalVideos: 0,
                 totalGuias: 0,
                 totalEvaluaciones: 0,
+                examenIntermedioId: null,
                 lecciones: [],
               };
             }
@@ -597,6 +608,19 @@ export function CourseDetailPage() {
                             </span>
                           )}
                         </div>
+
+                        {/* Botón examen intermedio — solo cuando el módulo está completado */}
+                        {modulo.examenIntermedioId && modulo.estado === 'completado' && (
+                          <button
+                            onClick={() => navigate(`/student/courses/${id}/examen/${modulo.examenIntermedioId}`)}
+                            className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold rounded-xl transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Rendir Examen Intermedio
+                          </button>
+                        )}
 
                         {/* Mensaje de módulo bloqueado */}
                         {isBloqueado && (
