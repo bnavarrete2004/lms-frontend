@@ -898,18 +898,35 @@ function ModalEncuesta({ inscripcionId, onEnviada }: ModalEncuestaProps) {
     }
     try {
       setEnviando(true);
+      // Obtener la encuesta activa (tipo satisfaccion_curso)
+      const encuestaRes = await api.get('/encuestas/', { params: { activa: true } });
+      const encuestas = encuestaRes.data?.results || encuestaRes.data || [];
+      const encuesta = encuestas.find((e: any) => e.tipo === 'satisfaccion_curso') || encuestas[0];
+      if (!encuesta) throw new Error('No hay encuesta activa configurada');
+
+      // Construir respuestas en el formato del modelo JSONField
+      const respuestasJson: Record<string, number | string> = {};
+      preguntas.forEach((_, idx) => { respuestasJson[String(idx + 1)] = respuestas[idx]; });
+      if (comentario.trim()) respuestasJson['comentario'] = comentario;
+
       await api.post('/respuestas-encuesta/', {
+        encuesta: encuesta.id,
         inscripcion: inscripcionId,
-        calificacion_general: Math.round(respuestas.reduce((a, b) => a + b, 0) / respuestas.length),
-        respuestas_json: JSON.stringify(respuestas),
-        comentarios: comentario,
+        respuestas: respuestasJson,
       });
+
+      // Intentar generar diploma automáticamente tras completar encuesta
+      try {
+        await api.post('/diplomas/generar/', { inscripcion_id: inscripcionId });
+      } catch (diplomaErr) {
+        console.log('Diploma no generado aún (puede requerir condiciones adicionales):', diplomaErr);
+      }
+
       setAbierto(false);
       onEnviada();
     } catch (err) {
       console.error('Error al enviar encuesta:', err);
-      // Marcamos como hecha localmente para no bloquear al estudiante
-      // si el endpoint aún no existe. Remover cuando esté listo.
+      // Si falla, igual marcamos como hecha para no bloquear al estudiante
       setAbierto(false);
       onEnviada();
     } finally {

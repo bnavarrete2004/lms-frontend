@@ -14,6 +14,7 @@ import { CourseDetailPage } from '@/pages/CourseDetailPage';
 import { LessonPage } from '@/pages/LessonPage'; // <--- YA SE USA ABAJO
 import { StudentCoursesPage } from '@/pages/StudentCoursesPage';
 import { StudentProgressPage } from '@/pages/StudentProgressPage';
+import { StudentDiplomasPage } from '@/pages/StudentDiplomasPage';
 import { ExamenPage } from '@/pages/ExamenPage';
 
 // --- PÁGINAS RELATOR ---
@@ -105,6 +106,15 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['estudiante', 'administrador']}>
                 <StudentProgressPage /> 
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/student/diplomas"
+            element={
+              <ProtectedRoute allowedRoles={['estudiante']}>
+                <StudentDiplomasPage />
               </ProtectedRoute>
             }
           />

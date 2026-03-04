@@ -1,25 +1,63 @@
 // src/pages/AdminUsuariosPage.tsx
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileSearch, BookOpen, Users, BarChart3,
   FolderTree, FileText, Globe, Settings, Eye, Pencil, X, Save,
   UserCheck, UserX, ShieldCheck, GraduationCap, Mic2, UserPlus,
   Building2, ChevronDown, Trash2,
+  Search, ClipboardCheck, CheckCircle2, ChevronUp, AlertCircle, BarChart2, Clock,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Alert } from '@/components/ui/Alert';
 import api from '@/api/axios';
 import { empresaService, type EmpresaCliente } from '@/api/services/empresaService';
 
+interface RespuestaDetalle {
+  id: number;
+  pregunta_data: { enunciado: string; tipo: string; opciones: Record<string, string>; respuesta_correcta: string; puntaje: number; };
+  respuesta_seleccionada: number | null;
+  respuesta_texto: string;
+  correcta: boolean | null;
+  puntaje_obtenido: number | null;
+}
+
+interface IntentoRevision {
+  id: number;
+  estudiante_nombre: string;
+  evaluacion_nombre: string;
+  validado_por_relator: boolean;
+  validado_por: number | null;
+  nota_obtenida: number | null;
+  puntaje_obtenido: number | null;
+  puntaje_total: number | null;
+  fecha_fin: string | null;
+  numero_intento: number;
+  respuestas?: RespuestaDetalle[];
+}
+
+function calcPct(obtenido: number | string | null, total: number | string | null): string {
+  if (obtenido == null || total == null) return '—';
+  const o = Number(obtenido);
+  const t = Number(total);
+  if (isNaN(o) || isNaN(t) || t === 0) return '—';
+  return Math.round((o / t) * 100) + '%';
+}
+
+function formatFecha(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
 type TipoUsuario = 'administrador' | 'relator' | 'estudiante';
-type TabActivo   = 'estudiantes' | 'relatores';
+type TabActivo   = 'estudiantes' | 'relatores' | 'examenes';
 
 interface UsuarioAPI {
   id: number;
@@ -84,6 +122,9 @@ function EstadoBadge({ activo }: { activo: boolean }) {
     ? <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-700"><UserCheck size={10} className="mr-1" />Activo</span>
     : <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-500"><UserX size={10} className="mr-1" />Inactivo</span>;
 }
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
@@ -806,6 +847,15 @@ export function AdminUsuariosPage() {
   const [tabActivo, setTabActivo] = useState<TabActivo>('estudiantes');
   const [busqueda, setBusqueda]   = useState('');
 
+  // Estado revisión exámenes — mismo patrón que RelatorEstudiantesPage
+  const [intentos, setIntentos]                 = useState<IntentoRevision[]>([]);
+  const [loadingInt, setLoadingInt]             = useState(false);
+  const [intentosCargados, setIntentosCargados] = useState(false);
+  const [expandido, setExpandido]               = useState<number | null>(null);
+  const [validando, setValidando]               = useState<number | null>(null);
+  const [filtroRevision, setFiltroRevision]     = useState<'pendientes' | 'revisados' | 'todos'>('pendientes');
+  const [busquedaRevision, setBusquedaRevision] = useState('');
+
   const [modalInscripcion, setModalInscripcion] = useState(false);
   const [modalMasivo, setModalMasivo]           = useState(false);
   const [usuarioSel, setUsuarioSel]             = useState<UsuarioAPI | null>(null);
@@ -830,6 +880,36 @@ export function AdminUsuariosPage() {
   };
 
   useEffect(() => { cargarDatos(); }, []);
+
+  useEffect(() => {
+    if (tabActivo !== 'examenes' || intentosCargados) return;
+    const cargarIntentos = async () => {
+      try {
+        setLoadingInt(true);
+        const res = await api.get('/intentos-evaluacion/', { params: { estado: 'completado' } });
+        const data: IntentoRevision[] = res.data?.results || res.data || [];
+        const conRespuestas = await Promise.all(
+          data.map(async (intento) => {
+            try { const det = await api.get(`/intentos-evaluacion/${intento.id}/`); return { ...intento, ...det.data }; }
+            catch { return intento; }
+          })
+        );
+        setIntentos(conRespuestas.filter(i => i.validado_por_relator));
+        setIntentosCargados(true);
+      } catch (err) { console.error('Error cargando intentos:', err); }
+      finally { setLoadingInt(false); }
+    };
+    cargarIntentos();
+  }, [tabActivo, intentosCargados]);
+
+  const validarIntento = async (intento: IntentoRevision) => {
+    setValidando(intento.id);
+    try {
+      await api.post(`/intentos-evaluacion/${intento.id}/validar/`);
+      setIntentos(prev => prev.map(i => i.id === intento.id ? { ...i, validado_por: -1 } : i));
+    } catch (err: any) { alert(err?.response?.data?.error || 'Error al validar el intento.'); }
+    finally { setValidando(null); }
+  };
 
   const handleGuardar = async () => {
     if (!usuarioSel) return;
@@ -862,8 +942,18 @@ export function AdminUsuariosPage() {
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
-  const tipoTab: TipoUsuario = tabActivo === 'estudiantes' ? 'estudiante' : 'relator';
-  const usuariosFiltrados = usuarios
+  const pendientesCount = intentos.filter(i => !i.validado_por).length;
+
+  const intentosFiltrados = useMemo(() => intentos.filter(i => {
+    const coincide = i.estudiante_nombre?.toLowerCase().includes(busquedaRevision.toLowerCase()) || i.evaluacion_nombre?.toLowerCase().includes(busquedaRevision.toLowerCase());
+    if (!coincide) return false;
+    if (filtroRevision === 'pendientes') return !i.validado_por;
+    if (filtroRevision === 'revisados') return !!i.validado_por;
+    return true;
+  }), [intentos, busquedaRevision, filtroRevision]);
+
+  const tipoTab: TipoUsuario = tabActivo === 'relatores' ? 'relator' : 'estudiante';
+  const usuariosFiltrados = tabActivo === 'examenes' ? [] : usuarios
     .filter(u => u.tipo_usuario === tipoTab)
     .filter(u => {
       const n = (u.nombre_completo || u.user.username).toLowerCase();
@@ -939,28 +1029,29 @@ export function AdminUsuariosPage() {
 
         {/* Tabs */}
         <div className="border-b border-slate-200">
-          <div className="flex gap-2">
-            {(['estudiantes', 'relatores'] as TabActivo[]).map(tab => (
-              <button
-                key={tab}
-                onClick={() => { setTabActivo(tab); setBusqueda(''); }}
-                className={`px-8 py-4 font-semibold text-sm rounded-t-lg flex items-center gap-2 transition-all ${
-                  tabActivo === tab ? 'bg-jc-blue text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                {tab === 'estudiantes' ? <GraduationCap size={18} /> : <Mic2 size={18} />}
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                  tabActivo === tab ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
-                }`}>
-                  {tab === 'estudiantes' ? estudiantes.length : relatores.length}
-                </span>
-              </button>
-            ))}
+          <div className="flex gap-0">
+            <button onClick={() => { setTabActivo('estudiantes'); setBusqueda(''); }}
+              className={`flex items-center gap-2 px-6 py-3 text-sm font-semibold border-b-2 transition-colors ${tabActivo === 'estudiantes' ? 'border-jc-blue text-jc-blue' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+            >
+              <GraduationCap size={16} /> Estudiantes
+              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${tabActivo === 'estudiantes' ? 'bg-jc-blue/10 text-jc-blue' : 'bg-slate-100 text-slate-500'}`}>{estudiantes.length}</span>
+            </button>
+            <button onClick={() => { setTabActivo('relatores'); setBusqueda(''); }}
+              className={`flex items-center gap-2 px-6 py-3 text-sm font-semibold border-b-2 transition-colors ${tabActivo === 'relatores' ? 'border-jc-blue text-jc-blue' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+            >
+              <Mic2 size={16} /> Relatores
+              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${tabActivo === 'relatores' ? 'bg-jc-blue/10 text-jc-blue' : 'bg-slate-100 text-slate-500'}`}>{relatores.length}</span>
+            </button>
+            <button onClick={() => { setTabActivo('examenes'); setBusqueda(''); }}
+              className={`flex items-center gap-2 px-6 py-3 text-sm font-semibold border-b-2 transition-colors ${tabActivo === 'examenes' ? 'border-jc-blue text-jc-blue' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+            >
+              <ClipboardCheck size={16} /> Validar Exámenes
+              {pendientesCount > 0 && <span className="ml-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{pendientesCount}</span>}
+            </button>
           </div>
         </div>
 
-        {/* Tabla */}
+        {tabActivo !== 'examenes' && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
           <div className="p-6 border-b border-slate-200 flex items-center gap-4">
             <div className="relative flex-1 max-w-md">
@@ -1037,6 +1128,141 @@ export function AdminUsuariosPage() {
             </div>
           )}
         </div>
+        )}
+
+        {tabActivo === 'examenes' && (
+          <>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex items-center gap-3 flex-wrap">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input type="text" placeholder="Buscar por estudiante o examen..." value={busquedaRevision} onChange={e => setBusquedaRevision(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-jc-blue/20 focus:border-jc-blue" />
+              </div>
+              <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+                {(['pendientes', 'revisados', 'todos'] as const).map(f => (
+                  <button key={f} onClick={() => setFiltroRevision(f)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${filtroRevision === f ? 'bg-white text-jc-blue shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    {f === 'pendientes' ? 'Pendientes' : f === 'revisados' ? 'Validados' : 'Todos'}
+                    {f === 'pendientes' && pendientesCount > 0 && <span className="ml-1.5 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{pendientesCount}</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {loadingInt ? (
+              <div className="bg-white rounded-xl border border-slate-200 p-16 text-center">
+                <div className="animate-spin w-8 h-8 border-4 border-jc-blue border-t-transparent rounded-full mx-auto mb-3" />
+                <p className="text-slate-400 text-sm">Cargando exámenes...</p>
+              </div>
+            ) : intentosFiltrados.length === 0 ? (
+              <div className="bg-white rounded-xl border border-slate-200 p-16 text-center">
+                <AlertCircle size={36} className="text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500 font-medium">{filtroRevision === 'pendientes' ? '¡Sin exámenes pendientes de validar!' : 'No hay resultados'}</p>
+                <p className="text-slate-400 text-sm mt-1">{filtroRevision === 'pendientes' ? 'Aparecerán aquí cuando el relator los confirme.' : 'Prueba con otro filtro.'}</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {intentosFiltrados.map(intento => (
+                  <div key={intento.id} className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-all ${!intento.validado_por ? 'border-amber-200' : 'border-slate-200'}`}>
+                    <div className="p-5 flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${intento.validado_por ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {intento.estudiante_nombre?.charAt(0).toUpperCase() || '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-slate-800 text-sm">{intento.estudiante_nombre}</span>
+                          {intento.validado_por ? <Badge variant="success">Validado</Badge> : <Badge variant="warning">Pendiente</Badge>}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5 truncate">{intento.evaluacion_nombre} · Intento #{intento.numero_intento}</p>
+                      </div>
+                      <div className="hidden sm:flex items-center gap-6 text-center flex-shrink-0">
+                        <div><p className="text-xs text-slate-400">Puntaje</p><p className="font-bold text-slate-700 text-sm">{intento.puntaje_obtenido ?? '—'}/{intento.puntaje_total ?? '—'}</p></div>
+                        <div><p className="text-xs text-slate-400">%</p><p className="font-bold text-slate-700 text-sm">{calcPct(intento.puntaje_obtenido, intento.puntaje_total)}</p></div>
+                        <div><p className="text-xs text-slate-400">Nota</p><p className={`font-bold text-sm ${intento.nota_obtenida == null ? 'text-slate-400' : Number(intento.nota_obtenida) >= 4 ? 'text-green-600' : 'text-red-600'}`}>{intento.nota_obtenida != null ? Number(intento.nota_obtenida).toFixed(1) : '—'}</p></div>
+                        <div><p className="text-xs text-slate-400">Entregado</p><p className="text-xs text-slate-600">{formatFecha(intento.fecha_fin)}</p></div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {!intento.validado_por && (
+                          <button onClick={() => validarIntento(intento)} disabled={validando === intento.id}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-jc-blue hover:bg-[#053d74] text-white text-xs font-medium rounded-lg transition disabled:opacity-60"
+                          >
+                            {validando === intento.id ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <ShieldCheck size={13} />}
+                            {validando === intento.id ? 'Validando...' : 'Validar'}
+                          </button>
+                        )}
+                        {intento.validado_por && <div className="flex items-center gap-1 text-green-600 text-xs font-medium"><CheckCircle2 size={13} /> Validado</div>}
+                        <button onClick={() => setExpandido(expandido === intento.id ? null : intento.id)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition">
+                          {expandido === intento.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                      </div>
+                    </div>
+                    {expandido === intento.id && (
+                      <div className="border-t border-slate-100 bg-slate-50 p-5">
+                        <div className="flex items-center gap-6 mb-4 text-xs text-slate-500 flex-wrap">
+                          <span className="flex items-center gap-1.5"><BarChart2 size={12} /> {intento.puntaje_obtenido ?? 0}/{intento.puntaje_total ?? 0} pts · {calcPct(intento.puntaje_obtenido, intento.puntaje_total)}{intento.nota_obtenida != null && <span className={`font-bold ml-1 ${Number(intento.nota_obtenida) >= 4 ? 'text-green-600' : 'text-red-600'}`}>· Nota: {Number(intento.nota_obtenida).toFixed(1)}</span>}</span>
+                          <span className="flex items-center gap-1.5"><Clock size={12} /> {formatFecha(intento.fecha_fin)}</span>
+                        </div>
+                        {!intento.respuestas || intento.respuestas.length === 0 ? (
+                          <p className="text-sm text-slate-400 text-center py-4">Sin respuestas registradas.</p>
+                        ) : (
+                          <div className="space-y-3">
+                            {intento.respuestas.map((resp, idx) => {
+                              const preg = resp.pregunta_data;
+                              const esCorrecta = resp.correcta === true;
+                              const esIncorrecta = resp.correcta === false;
+                              const opcionSel = resp.respuesta_seleccionada != null && preg?.opciones ? (preg.opciones[String(resp.respuesta_seleccionada)] ?? `Opción ${resp.respuesta_seleccionada}`) : (resp.respuesta_texto || '—');
+                              const opcionCorr = preg?.respuesta_correcta != null && preg?.opciones ? (preg.opciones[preg.respuesta_correcta] ?? `Opción ${preg.respuesta_correcta}`) : (preg?.respuesta_correcta || '—');
+                              return (
+                                <div key={resp.id} className={`rounded-lg border p-4 ${esCorrecta ? 'border-green-200 bg-green-50' : esIncorrecta ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-white'}`}>
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex-1">
+                                      <p className="text-xs font-semibold text-slate-500 mb-1">Pregunta {idx + 1}{preg?.tipo && <span className="ml-2 font-normal text-slate-400">({preg.tipo === 'seleccion_multiple' ? 'Selección múltiple' : preg.tipo === 'verdadero_falso' ? 'Verdadero/Falso' : 'Texto libre'})</span>}</p>
+                                      <p className="text-sm text-slate-800 font-medium mb-3">{preg?.enunciado || '(Pregunta no disponible)'}</p>
+                                      <div className="space-y-1.5">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-xs text-slate-500 w-24 flex-shrink-0">Respondió:</span>
+                                          <span className={`text-xs font-medium px-2 py-0.5 rounded ${esCorrecta ? 'bg-green-100 text-green-700' : esIncorrecta ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>{opcionSel}</span>
+                                        </div>
+                                        {esIncorrecta && (
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-xs text-slate-500 w-24 flex-shrink-0">Correcta era:</span>
+                                            <span className="text-xs font-medium px-2 py-0.5 rounded bg-green-100 text-green-700">{opcionCorr}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex-shrink-0 mt-1">
+                                      {esCorrecta && <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center"><CheckCircle2 size={14} className="text-white" /></div>}
+                                      {esIncorrecta && <div className="w-7 h-7 rounded-full bg-red-400 flex items-center justify-center"><span className="text-white text-xs font-bold">✗</span></div>}
+                                      {resp.correcta === null && <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center"><span className="text-slate-500 text-xs">?</span></div>}
+                                    </div>
+                                  </div>
+                                  {preg?.puntaje != null && <p className="text-right text-xs text-slate-400 mt-2">{resp.puntaje_obtenido ?? 0} / {preg.puntaje} pts</p>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {!intento.validado_por && (
+                          <div className="mt-4 pt-4 border-t border-slate-200 flex justify-end">
+                            <button onClick={() => validarIntento(intento)} disabled={validando === intento.id}
+                              className="flex items-center gap-2 px-4 py-2 bg-jc-blue hover:bg-[#053d74] text-white text-sm font-medium rounded-lg transition disabled:opacity-60"
+                            >
+                              {validando === intento.id ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <ShieldCheck size={15} />}
+                              Validar examen
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
       </div>
 
       {/* Modales */}

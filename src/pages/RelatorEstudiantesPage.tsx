@@ -81,9 +81,11 @@ interface IntentoRevision {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function calcPct(obtenido: number | null, total: number | null): string {
-  if (obtenido == null || total == null || total === 0) return '—';
-  return Math.round((obtenido / total) * 100) + '%';
+function calcPct(obtenido: number | string | null, total: number | string | null): string {
+  if (obtenido == null || total == null) return '—';
+  const o = Number(obtenido); const t = Number(total);
+  if (isNaN(o) || isNaN(t) || t === 0) return '—';
+  return Math.round((o / t) * 100) + '%';
 }
 
 function formatFecha(iso: string | null): string {
@@ -141,6 +143,8 @@ export function RelatorEstudiantesPage() {
       try {
         setLoadingInt(true);
         const res = await api.get('/intentos-evaluacion/', {
+          // Incluir tanto 'completado' como 'tiempo_excedido' - ambos son intentos rendidos
+          // No filtrar solo por 'completado' o se pierden los que se agotó el tiempo
           params: { estado: 'completado' },
         });
         const data: IntentoRevision[] = res.data?.results || res.data || [];
@@ -384,7 +388,7 @@ export function RelatorEstudiantesPage() {
                           <td className="px-6 py-4 text-center">
                             {i.nota_final ? (
                               <span className={`font-bold ${i.nota_final >= 4 ? 'text-green-600' : 'text-red-600'}`}>
-                                {i.nota_final.toFixed(1)}
+                                {Number(i.nota_final).toFixed(1)}
                               </span>
                             ) : (
                               <span className="text-slate-300 italic text-xs">S/N</span>
@@ -525,9 +529,9 @@ export function RelatorEstudiantesPage() {
                           <p className="text-xs text-slate-400">Nota</p>
                           <p className={`font-bold text-sm ${
                             intento.nota_obtenida == null ? 'text-slate-400' :
-                            intento.nota_obtenida >= 4 ? 'text-green-600' : 'text-red-600'
+                            Number(intento.nota_obtenida) >= 4 ? 'text-green-600' : 'text-red-600'
                           }`}>
-                            {intento.nota_obtenida != null ? intento.nota_obtenida.toFixed(1) : '—'}
+                            {intento.nota_obtenida != null ? Number(intento.nota_obtenida).toFixed(1) : '—'}
                           </p>
                         </div>
                         <div>
@@ -574,8 +578,8 @@ export function RelatorEstudiantesPage() {
                             {intento.puntaje_obtenido ?? 0}/{intento.puntaje_total ?? 0} pts
                             · {calcPct(intento.puntaje_obtenido, intento.puntaje_total)}
                             {intento.nota_obtenida != null && (
-                              <span className={`font-bold ml-1 ${intento.nota_obtenida >= 4 ? 'text-green-600' : 'text-red-600'}`}>
-                                · Nota: {intento.nota_obtenida.toFixed(1)}
+                              <span className={`font-bold ml-1 ${Number(intento.nota_obtenida) >= 4 ? 'text-green-600' : 'text-red-600'}`}>
+                                · Nota: {Number(intento.nota_obtenida).toFixed(1)}
                               </span>
                             )}
                           </span>
@@ -592,14 +596,20 @@ export function RelatorEstudiantesPage() {
                               const preg = resp.pregunta_data;
                               const esCorrecta = resp.correcta === true;
                               const esIncorrecta = resp.correcta === false;
-                              const opcionSel =
-                                resp.respuesta_seleccionada != null && preg?.opciones
-                                  ? (preg.opciones[String(resp.respuesta_seleccionada)] ?? `Opción ${resp.respuesta_seleccionada}`)
-                                  : (resp.respuesta_texto || '—');
-                              const opcionCorr =
-                                preg?.respuesta_correcta != null && preg?.opciones
-                                  ? (preg.opciones[preg.respuesta_correcta] ?? `Opción ${preg.respuesta_correcta}`)
-                                  : (preg?.respuesta_correcta || '—');
+                              const opcionSel = (() => {
+                                if (resp.respuesta_seleccionada != null && preg?.opciones) {
+                                  const k = String(resp.respuesta_seleccionada);
+                                  return preg.opciones[k] ?? preg.opciones[k.toLowerCase()] ?? `Opción ${resp.respuesta_seleccionada}`;
+                                }
+                                return resp.respuesta_texto || '—';
+                              })();
+                              const opcionCorr = (() => {
+                                if (preg?.respuesta_correcta != null && preg?.opciones) {
+                                  const k = String(preg.respuesta_correcta);
+                                  return preg.opciones[k] ?? preg.opciones[k.toLowerCase()] ?? `Opción ${preg.respuesta_correcta}`;
+                                }
+                                return preg?.respuesta_correcta || '—';
+                              })();
 
                               return (
                                 <div

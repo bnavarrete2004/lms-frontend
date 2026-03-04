@@ -95,8 +95,12 @@ export function ExamenPage() {
       const eval_data: Evaluacion = evalRes.data;
       const intentos: any[] = intentosRes.data?.results || intentosRes.data || [];
 
-      // Contar intentos completados (no en progreso)
-      const completados = intentos.filter(i => i.estado === 'completado' || i.estado === 'tiempo_excedido');
+      // Contar solo intentos que realmente "consumen" un intento:
+      // completado y tiempo_excedido sí cuentan. 'abandonado' NO cuenta
+      // (el backend lo crea al iniciar y puede abandonarlo sin que el estudiante rinda nada).
+      const completados = intentos.filter(
+        i => i.estado === 'completado' || i.estado === 'tiempo_excedido'
+      );
       setIntentosUsados(completados.length);
 
       // Verificar si agotó intentos
