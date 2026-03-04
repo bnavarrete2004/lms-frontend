@@ -898,19 +898,13 @@ function ModalEncuesta({ inscripcionId, onEnviada }: ModalEncuestaProps) {
     }
     try {
       setEnviando(true);
-      // Obtener la encuesta activa (tipo satisfaccion_curso)
-      const encuestaRes = await api.get('/encuestas/', { params: { activa: true } });
-      const encuestas = encuestaRes.data?.results || encuestaRes.data || [];
-      const encuesta = encuestas.find((e: any) => e.tipo === 'satisfaccion_curso') || encuestas[0];
-      if (!encuesta) throw new Error('No hay encuesta activa configurada');
-
       // Construir respuestas en el formato del modelo JSONField
       const respuestasJson: Record<string, number | string> = {};
       preguntas.forEach((_, idx) => { respuestasJson[String(idx + 1)] = respuestas[idx]; });
       if (comentario.trim()) respuestasJson['comentario'] = comentario;
 
+      // El backend auto-crea la encuesta por defecto si no existe (perform_create)
       await api.post('/respuestas-encuesta/', {
-        encuesta: encuesta.id,
         inscripcion: inscripcionId,
         respuestas: respuestasJson,
       });
