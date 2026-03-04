@@ -1,3 +1,4 @@
+// src/pages/StudentDashboardPage.tsx
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,14 +13,11 @@ import { inscripcionService } from '@/api/services/inscripcionService';
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const handleCourseClick = (cursoId: number) => {
-  navigate(`/student/courses/${cursoId}`);
-};
-
-  // ============================================
-  // CONEXIÓN CON BACKEND - DATOS REALES
-  // ============================================
   
+  const handleCourseClick = (cursoId: number) => {
+    navigate(`/student/courses/${cursoId}`);
+  };
+
   const { 
     data: inscripciones, 
     loading: loadingInscripciones, 
@@ -31,33 +29,22 @@ export function DashboardPage() {
     cargarInscripciones();
   }, []);
 
-  // ============================================
-  // CÁLCULOS BASADOS EN DATOS REALES
-  // ============================================
-  
-  // Filtrar inscripciones activas (en_curso)
   const inscripcionesActivas = inscripciones?.filter(i => i.estado === 'en_curso') || [];
   
-  // Calcular progreso general
   const progresoGeneral = inscripciones && inscripciones.length > 0
     ? Math.round(inscripciones.reduce((sum, i) => sum + (i.porcentaje_avance || 0), 0) / inscripciones.length)
     : 0;
 
-  // Curso con más progreso (para hero section)
   const cursoEnProgreso = inscripciones && inscripciones.length > 0
     ? inscripciones.reduce((max, i) => (i.porcentaje_avance || 0) > (max.porcentaje_avance || 0) ? i : max)
     : null;
-
-  // ============================================
-  // CONFIGURACIÓN DEL SIDEBAR
-  // ============================================
 
   const sidebarSections = [
     {
       title: 'Menú Principal',
       items: [
         {
-          href: '/dashboard',
+          href: '/student/dashboard', // Conectado
           icon: (
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -67,7 +54,7 @@ export function DashboardPage() {
           isActive: true,
         },
         {
-          href: '/student/courses',
+          href: '/student/courses', // Conectado
           icon: (
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -76,7 +63,7 @@ export function DashboardPage() {
           label: 'Mis Cursos',
         },
         {
-          href: '/diplomas',
+          href: '/student/diplomas', // Conectado
           icon: (
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -85,7 +72,7 @@ export function DashboardPage() {
           label: 'Mis Diplomas',
         },
         {
-          href: '/progress',
+          href: '/student/progress', // Conectado
           icon: (
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -94,7 +81,7 @@ export function DashboardPage() {
           label: 'Mi Progreso',
         },
         {
-          href: '/notifications',
+          href: '/student/notifications', // Conectado
           icon: (
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -111,7 +98,7 @@ export function DashboardPage() {
       title: 'Configuración',
       items: [
         {
-          href: '/profile',
+          href: '/student/profile', // Conectado
           icon: (
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -128,10 +115,6 @@ export function DashboardPage() {
     navigate('/login');
   };
 
-  // ============================================
-  // RENDER
-  // ============================================
-
   return (
     <MainLayout
       role="estudiante"
@@ -140,28 +123,25 @@ export function DashboardPage() {
       sidebarSections={sidebarSections}
       onLogout={handleLogout}
       headerTitle="Dashboard General"
-      headerSubtitle={`Bienvenido de vuelta,${user?.nombre_completo || user?.username || 'Usuario'}`}
+      headerSubtitle={`Bienvenido de vuelta, ${user?.nombre_completo || user?.username || 'Usuario'}`}
       sessionTime="1h 23min"
       notificationCount={2}
     >
+      {/* Resto del componente igual... */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-        
-        {/* COLUMNA PRINCIPAL (Acción) - 8 de 12 columnas */}
         <div className="xl:col-span-8 space-y-8">
-          
-          {/* 1. Hero / Continuar Viendo - CON DATOS REALES */}
           {loadingInscripciones ? (
             <div className="h-72 bg-slate-200 animate-pulse rounded-2xl" />
           ) : cursoEnProgreso ? (
             <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 h-72 flex items-center shadow-xl group">
-                  {cursoEnProgreso.curso_data?.imagen_portada && (
-                    <img
-                      src={cursoEnProgreso.curso_data.imagen_portada}
-                      className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700"
-                      alt="Curso"
-                    />
-                  )}
-                  <div className="relative z-10 p-8 md:p-12 max-w-2xl">
+              {cursoEnProgreso.curso_data?.imagen_portada && (
+                <img
+                  src={cursoEnProgreso.curso_data.imagen_portada}
+                  className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700"
+                  alt="Curso"
+                />
+              )}
+              <div className="relative z-10 p-8 md:p-12 max-w-2xl">
                 <Badge variant="calipso" className="mb-4 animate-pulse">
                   En Progreso
                 </Badge>
@@ -177,7 +157,10 @@ export function DashboardPage() {
                   </div>
                   <span className="text-white font-bold text-sm">{cursoEnProgreso.porcentaje_avance}% completado</span>
                 </div>
-                <button className="px-8 py-3 bg-jc-calipso text-white rounded-lg font-semibold hover:bg-white hover:text-slate-900 transition-all transform hover:shadow-lg">
+                <button 
+                  onClick={() => handleCourseClick(cursoEnProgreso.curso)}
+                  className="px-8 py-3 bg-jc-calipso text-white rounded-lg font-semibold hover:bg-white hover:text-slate-900 transition-all transform hover:shadow-lg"
+                >
                   Retomar Lección
                 </button>
               </div>
@@ -185,20 +168,18 @@ export function DashboardPage() {
           ) : (
             <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 h-72 flex items-center shadow-xl">
               <div className="relative z-10 p-8 md:p-12 text-center w-full">
-                <h2 className="text-2xl font-bold text-white mb-4">
-                  No tienes cursos en progreso
-                </h2>
-                <p className="text-white/70 mb-6">
-                  Explora el catálogo y comienza tu primera capacitación
-                </p>
-                <button className="px-8 py-3 bg-jc-calipso text-white rounded-lg font-semibold hover:bg-white hover:text-slate-900 transition-all">
+                <h2 className="text-2xl font-bold text-white mb-4">No tienes cursos en progreso</h2>
+                <p className="text-white/70 mb-6">Explora el catálogo y comienza tu primera capacitación</p>
+                <button 
+                  onClick={() => navigate('/student/courses')}
+                  className="px-8 py-3 bg-jc-calipso text-white rounded-lg font-semibold hover:bg-white hover:text-slate-900 transition-all"
+                >
                   Ver Catálogo
                 </button>
               </div>
             </section>
           )}
 
-          {/* 2. Cursos Activos - CON DATOS REALES */}
           <section>
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-slate-800 flex items-center">
@@ -241,10 +222,7 @@ export function DashboardPage() {
           </section>
         </div>
 
-        {/* COLUMNA LATERAL (Información y Status) - 4 de 12 columnas */}
         <aside className="xl:col-span-4 space-y-8">
-          
-          {/* 3. Hitos y Urgencias */}
           <div className="bg-slate-50 p-4 rounded-2xl">
             <h3 className="text-lg font-bold text-slate-800 mb-4">Hitos Próximos</h3>
             <div className="space-y-3">
@@ -258,7 +236,6 @@ export function DashboardPage() {
             </div>
           </div>
 
-          {/* 4. Logros (Gamificación) */}
           <div className="bg-gradient-to-br from-jc-calipso to-jc-blue rounded-2xl p-6 text-white shadow-lg relative overflow-hidden group">
             <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:rotate-12 transition-transform duration-500">
               <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 20 20">
@@ -276,7 +253,6 @@ export function DashboardPage() {
             </div>
           </div>
 
-          {/* 5. Actividad Reciente */}
           <div>
             <h3 className="text-lg font-bold text-slate-800 mb-4">Bitácora</h3>
             <div className="bg-white rounded-xl border border-slate-100 divide-y divide-slate-100 shadow-sm">
@@ -308,14 +284,16 @@ export function DashboardPage() {
           </div>
         </aside>
 
-        {/* 6. SECCIÓN INFERIOR (Exploración) - 12 de 12 columnas */}
         <footer className="xl:col-span-12 pt-8 border-t border-slate-200">
           <div className="flex justify-between items-end mb-8">
             <div>
               <h3 className="text-2xl font-bold text-slate-800">Explora Más Cursos</h3>
               <p className="text-slate-500 mt-1">Potencia tu carrera profesional con estas nuevas capacitaciones</p>
             </div>
-            <button className="group flex items-center text-jc-blue font-bold hover:text-jc-calipso transition-colors">
+            <button 
+              onClick={() => navigate('/student/courses')}
+              className="group flex items-center text-jc-blue font-bold hover:text-jc-calipso transition-colors"
+            >
               Ver catálogo completo
               <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
@@ -331,6 +309,7 @@ export function DashboardPage() {
               duration="16 Horas lectivas"
               category="Medio Ambiente"
               isNew={true}
+              onClick={() => navigate('/student/courses')}
             />
             <AvailableCourseCard
               title="Tecnologías de Monitoreo en Cultivos Marinos"
@@ -338,6 +317,7 @@ export function DashboardPage() {
               senceId="3958472"
               duration="20 Horas lectivas"
               category="Tecnología"
+              onClick={() => navigate('/student/courses')}
             />
             <AvailableCourseCard
               title="Nutrición Avanzada en Salmónidos"
@@ -345,6 +325,7 @@ export function DashboardPage() {
               senceId="4729183"
               duration="24 Horas lectivas"
               category="Nutrición"
+              onClick={() => navigate('/student/courses')}
             />
             <AvailableCourseCard
               title="Certificación ISO 14001 para Centros de Cultivo"
@@ -353,10 +334,10 @@ export function DashboardPage() {
               duration="32 Horas lectivas"
               category="Certificaciones"
               isNew={true}
+              onClick={() => navigate('/student/courses')}
             />
           </div>
         </footer>
-
       </div>
     </MainLayout>
   );
