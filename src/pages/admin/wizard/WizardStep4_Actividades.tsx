@@ -47,7 +47,7 @@ const TIPO_COLORES: Record<string, string> = {
 function getMaterialIcon(tipo: string, size = 20) {
   switch (tipo) {
     case 'video':        return <PlayCircle size={size} className="text-red-500" />;
-    case 'documento':    return <FileText size={size} className="text-blue-500" />;
+    case 'pdf':          return <FileText size={size} className="text-blue-500" />;
     case 'presentacion': return <ClipboardList size={size} className="text-amber-500" />;
     default:             return <BookOpen size={size} className="text-slate-400" />;
   }
@@ -56,7 +56,7 @@ function getMaterialIcon(tipo: string, size = 20) {
 function getMaterialBg(tipo: string) {
   switch (tipo) {
     case 'video':        return 'bg-red-50';
-    case 'documento':    return 'bg-blue-50';
+    case 'pdf':          return 'bg-blue-50';
     case 'presentacion': return 'bg-amber-50';
     default:             return 'bg-slate-50';
   }
@@ -185,7 +185,7 @@ export function WizardStep4_Actividades({
   const conteosTipo = useMemo(() => ({
     todos: materialesDB.length,
     video: materialesDB.filter(m => m.tipo === 'video').length,
-    documento: materialesDB.filter(m => m.tipo === 'documento').length,
+    pdf: materialesDB.filter(m => m.tipo === 'pdf').length,
     presentacion: materialesDB.filter(m => m.tipo === 'presentacion').length,
   }), [materialesDB]);
 
@@ -502,7 +502,7 @@ export function WizardStep4_Actividades({
                 {[
                   { key: 'todos', label: `Todos (${conteosTipo.todos})` },
                   { key: 'video', label: `Videos (${conteosTipo.video})`, icon: <Video size={13} /> },
-                  { key: 'documento', label: `PDFs (${conteosTipo.documento})`, icon: <FileText size={13} /> },
+                  { key: 'pdf', label: `PDFs (${conteosTipo.pdf})`, icon: <FileText size={13} /> },
                   { key: 'presentacion', label: `Presentaciones (${conteosTipo.presentacion})`, icon: <ClipboardList size={13} /> },
                 ].map(({ key, label, icon }) => (
                   <button
@@ -581,7 +581,7 @@ export function WizardStep4_Actividades({
                             )}
                           </div>
                           <div className="mt-2">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">
+                            <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">
                               <CheckCircle2 size={10} /> Producción completa
                             </span>
                             {yaAsignado && (
