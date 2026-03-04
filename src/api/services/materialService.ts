@@ -57,20 +57,23 @@ class MaterialService extends BaseService<Material> {
     });
     return response.data.results || response.data;
   }
-
   /**
-   * Obtiene solo materiales OFICIALES (ya maquetados y aprobados)
-   * Útil para el paso 4 del Wizard de cursos.
+   * Obtiene materiales listos para usar (maquetados o de aprobación directa).
+   * Por defecto excluye 'examen' para evitar errores de duplicidad en lecciones.
    */
-  async getAprobados(): Promise<Material[]> {
-    return this.filter({ estado: 'aprobado' });
-  }
-
-  /**
-   * Obtiene materiales pendientes de maquetación/diseño (Solo para Admin)
-   */
-  async getEnDiseno(): Promise<Material[]> {
-    return this.filter({ estado: 'en_diseno' });
+  async getAprobados(excluirExamenes: boolean = true): Promise<Material[]> {
+    // Definimos los parámetros de búsqueda
+    const params: any = { 
+      estado: 'aprobado' // Coincide con el string de tu Backend
+    };
+    
+    // Si la bandera está activa, añadimos la instrucción de exclusión
+    if (excluirExamenes) {
+      params.exclude_type = 'examen';
+    }
+    
+    // Invocamos la lógica de BaseService para hacer el GET con estos params
+    return this.filter(params);
   }
 
   /**
