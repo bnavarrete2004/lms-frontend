@@ -483,7 +483,7 @@ export function ExamenPage() {
               </div>
               <div className="min-w-0">
                 <p className="font-bold text-slate-800 text-sm truncate">{evaluacion.nombre}</p>
-                <p className="text-xs text-slate-400">{user?.nombre || 'Estudiante'}</p>
+                <p className="text-xs text-slate-400">{user?.nombre_completo || user?.username || 'Estudiante'}</p>
               </div>
             </div>
 
