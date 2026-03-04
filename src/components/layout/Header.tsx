@@ -23,7 +23,7 @@ export function Header({
   actions,
 }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-10 bg-white/90 backdrop-blur-md px-10 py-6 border-b border-slate-200">
+    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md px-10 py-6 border-b border-slate-200">
       <div className="flex items-center justify-between">
         {/* Título */}
         <div>
