@@ -137,24 +137,6 @@ function LeccionCard({
                 )}
               </div>
             </div>
-
-            {/* Obligatoria */}
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id={`obligatoria-${leccion._localId}`}
-                checked={leccion.obligatoria}
-                onChange={e => onActualizar({ obligatoria: e.target.checked })}
-                className="w-4 h-4 accent-jc-blue"
-              />
-              <label
-                htmlFor={`obligatoria-${leccion._localId}`}
-                className="text-sm text-slate-700 cursor-pointer"
-              >
-                Lección obligatoria
-              </label>
-            </div>
-
           </div>
         </div>
       </div>

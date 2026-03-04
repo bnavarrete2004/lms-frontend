@@ -85,7 +85,7 @@ export function StudentCoursesPage() {
   return (
     <MainLayout
       role="estudiante"
-      userName={user?.nombre_completo || 'Estudiante'}
+      userName={user?.nombre_completo || 'Estudiante'} 
       userSubtitle={user?.rut}
       sidebarSections={sidebarSections}
       onLogout={() => { logout(); navigate('/login'); }}
