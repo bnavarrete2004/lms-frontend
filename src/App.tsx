@@ -15,6 +15,8 @@ import { LessonPage } from '@/pages/LessonPage'; // <--- YA SE USA ABAJO
 import { StudentCoursesPage } from '@/pages/StudentCoursesPage';
 import { StudentProgressPage } from '@/pages/StudentProgressPage';
 import { StudentDiplomasPage } from '@/pages/StudentDiplomasPage';
+import { StudentNotificacionesPage } from '@/pages/StudentNotificacionesPage'; 
+import { StudentProfilePage } from '@/pages/StudentProfilePage'; // <--- AGREGADO
 import { ExamenPage } from '@/pages/ExamenPage';
 
 // --- PÁGINAS RELATOR ---
@@ -115,6 +117,24 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['estudiante']}>
                 <StudentDiplomasPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/student/notifications"
+            element={
+              <ProtectedRoute allowedRoles={['estudiante']}>
+                <StudentNotificacionesPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/student/profile"
+            element={
+              <ProtectedRoute allowedRoles={['estudiante']}>
+                <StudentProfilePage />
               </ProtectedRoute>
             }
           />
