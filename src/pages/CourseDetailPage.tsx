@@ -20,7 +20,8 @@ import {
   Award, 
   BarChart3, 
   Bell, 
-  User 
+  User,
+  Clock // Añadido para el mensaje de espera
 } from 'lucide-react';
 
 // Tipos de estado del módulo
@@ -676,50 +677,65 @@ export function CourseDetailPage() {
             </div>
           )}
 
-          {/* ── Card 3: Diploma — visible solo si encuesta completada ── */}
+          {/* ── Card 3: Diploma o Mensaje de Espera ── */}
           {cierre.encuestaHecha && (
-            <div className="bg-gradient-to-r from-[#064D91] via-[#088395] to-[#06B6D4] rounded-xl p-8 text-white shadow-xl">
-              <div className="flex items-center justify-between gap-6">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">3</div>
-                    <span className="text-white/70 text-sm font-semibold uppercase tracking-wider">Último paso</span>
-                  </div>
-                  <h3 className="text-2xl font-bold mb-1">
-                    ¡Felicitaciones, {user?.nombre_completo || user?.username}!
-                  </h3>
-                  <p className="text-white/80">
-                    Has cumplido todos los requisitos. Tu diploma está listo para descargar.
-                  </p>
-                </div>
-
-                {cierre.diplomaUrl ? (
-                  <a
-                    href={cierre.diplomaUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-shrink-0 flex items-center gap-2 bg-white text-[#064D91] font-bold px-8 py-4 rounded-xl hover:bg-blue-50 transition-colors text-base shadow-lg"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Descargar Diploma
-                  </a>
-                ) : (
-                  <div className="flex-shrink-0 text-right">
-                    <div className="flex items-center gap-2 bg-white/20 text-white font-semibold px-6 py-3 rounded-xl text-sm">
-                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                      </svg>
-                      Generando diploma...
+            <>
+              {/* CASO A: APROBADO -> Mostrar Diploma */}
+              {inscripcion?.estado === 'aprobado' ? (
+                <div className="bg-gradient-to-r from-[#064D91] via-[#088395] to-[#06B6D4] rounded-xl p-8 text-white shadow-xl animate-in fade-in zoom-in duration-500">
+                  <div className="flex items-center justify-between gap-6">
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">3</div>
+                        <span className="text-white/70 text-sm font-semibold uppercase tracking-wider">Certificación oficial</span>
+                      </div>
+                      <h3 className="text-2xl font-bold mb-1">
+                        ¡Felicitaciones, {user?.nombre_completo || user?.username}!
+                      </h3>
+                      <p className="text-white/80">
+                        Has cumplido todos los requisitos. Tu diploma está listo para descargar.
+                      </p>
                     </div>
-                    <p className="text-white/60 text-xs mt-1">La institución lo procesará pronto</p>
+
+                    {cierre.diplomaUrl && (
+                      <a
+                        href={cierre.diplomaUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-shrink-0 flex items-center gap-2 bg-white text-[#064D91] font-bold px-8 py-4 rounded-xl hover:bg-blue-50 transition-colors text-base shadow-lg"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Descargar Diploma
+                      </a>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
+              ) : (
+                /* CASO B: COMPLETADO (pero no aprobado) -> Mostrar mensaje de espera */
+                <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-8 shadow-sm flex items-start gap-4 animate-in slide-in-from-bottom-4 duration-500">
+                  <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Clock className="text-amber-600" size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-amber-900 mb-1">
+                      Procesando aprobación final
+                    </h3>
+                    <p className="text-amber-800 text-sm leading-relaxed">
+                      Has completado todas las lecciones y la encuesta. El sistema está validando tus notas del examen final y asistencias para generar tu certificado oficial.
+                    </p>
+                    <div className="mt-4 flex items-center gap-2 text-xs font-bold text-amber-600 uppercase tracking-widest">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                      </span>
+                      Estado actual: Pendiente de validación
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
