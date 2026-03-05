@@ -14,7 +14,6 @@ import progresoService, { type ProgresoModulo } from '@/api/services/progresoSer
 import { inscripcionService, type Inscripcion } from '@/api/services/inscripcionService';
 import api from '@/api/axios';
 
-// IMPORTACIONES DE ÍCONOS PARA MANTENER CONSISTENCIA
 import { 
   LayoutDashboard, 
   BookOpen, 
@@ -29,13 +28,10 @@ type EstadoModulo = 'completado' | 'en_progreso' | 'bloqueado';
 
 // Estado del examen final para las cards de cierre
 interface EstadoCierre {
-  examenFinalId: number | null;       
-  intentoFinalId: number | null;      
-  examenRendido: boolean;             
-  examenValidado: boolean;            
-  examenAprobado: boolean | null;     
-  encuestaHecha: boolean;             
-  diplomaUrl: string | null;          
+  examenFinalId: number | null;
+  examenRendido: boolean;
+  encuestaHecha: boolean;
+  diplomaUrl: string | null;
 }
 
 interface ModuloConEstado extends Modulo {
@@ -62,58 +58,33 @@ export function CourseDetailPage() {
 
   const [cierre, setCierre] = useState<EstadoCierre>({
     examenFinalId: null,
-    intentoFinalId: null,
     examenRendido: false,
-    examenValidado: false,
-    examenAprobado: null,
     encuestaHecha: false,
     diplomaUrl: null,
   });
 
-  // CONFIGURACIÓN DEL SIDEBAR - AHORA IDÉNTICA AL DASHBOARD
   const sidebarSections = [
     {
       title: 'Menú Principal',
       items: [
-        { 
-          href: '/student/dashboard', 
-          icon: <LayoutDashboard size={20} />, 
-          label: 'Mi Panel' 
-        },
-        { 
-          href: '/student/courses', 
-          icon: <BookOpen size={20} />, 
-          label: 'Mis Cursos', 
-          isActive: true 
-        },
-        { 
-          href: '/student/diplomas', 
-          icon: <Award size={20} />, 
-          label: 'Mis Diplomas' 
-        },
-        { 
-          href: '/student/progress', 
-          icon: <BarChart3 size={20} />, 
-          label: 'Mi Progreso' 
-        },
+        { href: '/student/dashboard', icon: <LayoutDashboard size={20} />, label: 'Mi Panel' },
+        { href: '/student/courses',   icon: <BookOpen size={20} />,        label: 'Mis Cursos', isActive: true },
+        { href: '/student/diplomas',  icon: <Award size={20} />,           label: 'Mis Diplomas' },
+        { href: '/student/progress',  icon: <BarChart3 size={20} />,       label: 'Mi Progreso' },
       ],
     },
     {
       title: 'Cuenta',
       items: [
-        { 
-          href: '/student/notifications', 
-          icon: <Bell size={20} />, 
-          label: 'Notificaciones', 
+        {
+          href: '/student/notifications',
+          icon: <Bell size={20} />,
+          label: 'Notificaciones',
           badge: 2,
           badgeVariant: 'danger' as const,
           badgeAnimated: true,
         },
-        { 
-          href: '/student/profile', 
-          icon: <User size={20} />, 
-          label: 'Mi Perfil' 
-        },
+        { href: '/student/profile', icon: <User size={20} />, label: 'Mi Perfil' },
       ]
     }
   ];
@@ -151,7 +122,6 @@ export function CourseDetailPage() {
         }
 
         // 5. Enriquecer módulos con información de lecciones y progreso REAL
-        // Cargar evaluaciones de todos los módulos en una sola llamada
         const evalRes = await api.get('/evaluaciones/', { params: { tipo: 'sumativa' } });
         const todasEvaluaciones = evalRes.data?.results || evalRes.data || [];
 
@@ -160,21 +130,17 @@ export function CourseDetailPage() {
             try {
               const lecciones = await leccionService.getByModulo(modulo.id);
 
-              const totalLecciones = lecciones.length;
-              const totalVideos = lecciones.filter(l => l.tipo === 'teorica' || l.tipo === 'mixta').length;
-              const totalGuias  = lecciones.filter(l => l.tipo === 'practica').length;
-
-              // Evaluaciones intermedias reales asignadas a este módulo
-              const evalModulo = todasEvaluaciones.filter((e: any) => e.modulo === modulo.id);
+              const totalLecciones    = lecciones.length;
+              const totalVideos       = lecciones.filter(l => l.tipo === 'teorica' || l.tipo === 'mixta').length;
+              const totalGuias        = lecciones.filter(l => l.tipo === 'practica').length;
+              const evalModulo        = todasEvaluaciones.filter((e: any) => e.modulo === modulo.id);
               const totalEvaluaciones = evalModulo.length;
               const examenIntermedioId = evalModulo[0]?.id ?? null;
 
-              // Buscar el progreso REAL de este módulo
               const progresoModulo = progresos.find(p => p.modulo === modulo.id);
-              const progreso = progresoModulo?.porcentaje_avance ?? 0;
+              const progreso   = progresoModulo?.porcentaje_avance ?? 0;
               const completado = progresoModulo?.completado ?? false;
 
-              // Determinar estado según progreso real
               let estado: EstadoModulo;
               if (completado || progreso === 100) {
                 estado = 'completado';
@@ -186,8 +152,8 @@ export function CourseDetailPage() {
                   estado = 'en_progreso';
                 } else {
                   const moduloAnteriorIndex = modulosData.findIndex(m => m.id === modulo.id) - 1;
-                  const moduloAnterior = modulosData[moduloAnteriorIndex];
-                  const progresoAnterior = progresos.find(p => p.modulo === moduloAnterior?.id);
+                  const moduloAnterior      = modulosData[moduloAnteriorIndex];
+                  const progresoAnterior    = progresos.find(p => p.modulo === moduloAnterior?.id);
                   estado = progresoAnterior?.completado ? 'en_progreso' : 'bloqueado';
                 }
               }
@@ -222,7 +188,7 @@ export function CourseDetailPage() {
 
         setModulos(modulosConEstado);
 
-        // 6. Cargar estado de cierre de curso (examen final, encuesta, diploma)
+        // 6. Cargar estado de cierre de curso
         if (inscripcionActual) {
           await cargarEstadoCierre(parseInt(id), inscripcionActual);
         }
@@ -244,29 +210,18 @@ export function CourseDetailPage() {
       // Buscar evaluación de tipo 'final' del curso
       const evalRes = await api.get('/evaluaciones/', { params: { curso: cursoId, tipo: 'final' } });
       const evaluaciones = evalRes.data?.results || evalRes.data || [];
-      const examenFinal = evaluaciones[0] ?? null;
+      const examenFinal  = evaluaciones[0] ?? null;
 
-      if (!examenFinal) {
-        // El curso no tiene examen final configurado → no mostrar sección de cierre
-        return;
-      }
+      if (!examenFinal) return; // Sin examen final configurado → no mostrar sección de cierre
 
-      // Buscar intentos del estudiante en ese examen
+      // Buscar intentos completados del estudiante en ese examen
       const intentosRes = await api.get('/intentos-evaluacion/', {
         params: { evaluacion: examenFinal.id }
       });
       const intentos: any[] = intentosRes.data?.results || intentosRes.data || [];
-      // Tomar el intento más reciente completado
-      const intentoFinal = intentos
-        .filter((i: any) => i.estado === 'completado')
-        .sort((a: any, b: any) => new Date(b.fecha_fin).getTime() - new Date(a.fecha_fin).getTime())[0] ?? null;
+      const examenRendido = intentos.some((i: any) => i.estado === 'completado');
 
-      const examenRendido = !!intentoFinal;
-      // nota_obtenida es null cuando el serializer la oculta (no validada aún)
-      const examenValidado = examenRendido && intentoFinal.nota_obtenida !== null;
-      const examenAprobado = examenValidado ? (intentoFinal.aprobado ?? null) : null;
-
-      // Verificar si hay encuesta respondida para esta inscripción
+      // Encuesta
       const encuestaRes = await api.get('/respuestas-encuesta/', {
         params: { inscripcion: insc.id }
       }).catch(() => ({ data: [] }));
@@ -278,10 +233,7 @@ export function CourseDetailPage() {
 
       setCierre({
         examenFinalId: examenFinal.id,
-        intentoFinalId: intentoFinal?.id ?? null,
         examenRendido,
-        examenValidado,
-        examenAprobado,
         encuestaHecha,
         diplomaUrl,
       });
@@ -297,13 +249,12 @@ export function CourseDetailPage() {
   };
 
   const handleEncuestaEnviada = async () => {
-    // Refrescar el estado de cierre tras enviar la encuesta
     if (inscripcion && id) {
       await cargarEstadoCierre(parseInt(id), inscripcion);
     }
   };
 
-  // Función para obtener clases CSS según el estado del módulo
+  // Clases CSS según el estado del módulo
   const getModuleStateClasses = (estado: EstadoModulo) => {
     switch (estado) {
       case 'completado':
@@ -396,12 +347,11 @@ export function CourseDetailPage() {
     );
   }
 
-  // Calcular progreso general del curso
   const progresoGeneral = modulos.length > 0
     ? Math.round(modulos.reduce((acc, m) => acc + m.progreso, 0) / modulos.length)
     : 0;
 
-  const leccionesCompletadas = modulos.reduce((acc, m) => 
+  const leccionesCompletadas = modulos.reduce((acc, m) =>
     m.estado === 'completado' ? acc + m.totalLecciones : acc, 0
   );
   const leccionesTotales = modulos.reduce((acc, m) => acc + m.totalLecciones, 0);
@@ -416,7 +366,7 @@ export function CourseDetailPage() {
       headerTitle={curso.nombre}
       headerSubtitle={curso.codigo_sence_data?.codigo ? `Código SENCE: ${curso.codigo_sence_data.codigo}` : ''}
     >
-      {/* HERO SECTION - SIN FILTRO AZUL */}
+      {/* HERO SECTION */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
         <div className="relative h-64 bg-slate-900">
           {curso.imagen_portada && (
@@ -441,14 +391,13 @@ export function CourseDetailPage() {
           </div>
         </div>
 
-        {/* Descripción e información del curso */}
         <div className="p-8">
           <div className="mb-6">
             <h2 className="text-xl font-bold text-slate-800 mb-2">Descripción del Curso</h2>
             <p className="text-slate-600">{curso.descripcion}</p>
           </div>
 
-          {/* Estadísticas del curso - DISEÑO DEL MOCKUP */}
+          {/* Estadísticas del curso */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -499,10 +448,10 @@ export function CourseDetailPage() {
               <div>
                 <p className="text-xs text-slate-500">Relator</p>
                 <p className="text-sm font-bold text-slate-800">
-                    {curso.relatores && curso.relatores.length > 0
-                      ? curso.relatores.map(r => r.relator_nombre || r.nombre_completo || 'Relator').join(', ')
-                      : 'No asignado'}
-                  </p>
+                  {curso.relatores && curso.relatores.length > 0
+                    ? curso.relatores.map(r => r.relator_nombre || r.nombre_completo || 'Relator').join(', ')
+                    : 'No asignado'}
+                </p>
               </div>
             </div>
           </div>
@@ -514,8 +463,8 @@ export function CourseDetailPage() {
               <span className="text-sm font-bold text-jc-blue">{progresoGeneral}%</span>
             </div>
             <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
-              <div 
-                className="bg-gradient-to-r from-jc-blue to-jc-cyan h-full rounded-full transition-all duration-500" 
+              <div
+                className="bg-gradient-to-r from-jc-blue to-jc-cyan h-full rounded-full transition-all duration-500"
                 style={{ width: `${progresoGeneral}%` }}
               ></div>
             </div>
@@ -523,7 +472,7 @@ export function CourseDetailPage() {
         </div>
       </div>
 
-      {/* MÓDULOS DEL CURSO - DISEÑO DEL MOCKUP */}
+      {/* MÓDULOS DEL CURSO */}
       <div className="space-y-4">
         <h2 className="text-xl font-bold text-slate-800 mb-6">Módulos del curso</h2>
 
@@ -534,7 +483,7 @@ export function CourseDetailPage() {
         ) : (
           modulos.map((modulo) => {
             const stateClasses = getModuleStateClasses(modulo.estado);
-            const isBloqueado = modulo.estado === 'bloqueado';
+            const isBloqueado  = modulo.estado === 'bloqueado';
 
             return (
               <div
@@ -544,13 +493,11 @@ export function CourseDetailPage() {
                 <div className={`p-6 ${stateClasses.cardBg}`}>
                   <div className="flex items-start justify-between">
                     <div className="flex items-start space-x-4 flex-1">
-                      {/* Icono del módulo */}
                       <div className={`w-12 h-12 ${stateClasses.iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
                         {stateClasses.icon}
                       </div>
 
                       <div className="flex-1">
-                        {/* Título y estado */}
                         <div className="flex items-center space-x-3 mb-2">
                           <h3 className="text-lg font-bold text-slate-800">
                             Módulo {modulo.orden}: {modulo.nombre}
@@ -560,10 +507,8 @@ export function CourseDetailPage() {
                           </span>
                         </div>
 
-                        {/* Descripción */}
                         <p className="text-sm text-slate-600 mb-3">{modulo.descripcion}</p>
 
-                        {/* Métricas del módulo */}
                         <div className="flex items-center space-x-4 text-xs text-slate-500">
                           {modulo.totalVideos > 0 && (
                             <span className="flex items-center">
@@ -573,7 +518,6 @@ export function CourseDetailPage() {
                               {modulo.totalVideos} {modulo.totalVideos === 1 ? 'video' : 'videos'}
                             </span>
                           )}
-
                           {modulo.totalGuias > 0 && (
                             <span className="flex items-center">
                               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -582,7 +526,6 @@ export function CourseDetailPage() {
                               {modulo.totalGuias} {modulo.totalGuias === 1 ? 'guía' : 'guías'}
                             </span>
                           )}
-
                           {modulo.totalEvaluaciones > 0 && (
                             <span className="flex items-center">
                               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -593,7 +536,6 @@ export function CourseDetailPage() {
                           )}
                         </div>
 
-                        {/* Botón examen intermedio — solo cuando el módulo está completado */}
                         {modulo.examenIntermedioId && modulo.estado === 'completado' && (
                           <button
                             onClick={() => navigate(`/student/courses/${id}/examen/${modulo.examenIntermedioId}`)}
@@ -606,7 +548,6 @@ export function CourseDetailPage() {
                           </button>
                         )}
 
-                        {/* Mensaje de módulo bloqueado */}
                         {isBloqueado && (
                           <p className="text-xs text-amber-600 mt-3 flex items-center">
                             <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -618,18 +559,15 @@ export function CourseDetailPage() {
                       </div>
                     </div>
 
-                    {/* Progreso y duración */}
                     <div className="text-right">
                       <div className={`text-2xl font-bold ${stateClasses.progressColor}`}>
                         {modulo.progreso}%
                       </div>
                       <p className="text-xs text-slate-500">{modulo.horas_estimadas}h estimadas</p>
-                      
-                      {/* Botón de acción solo si no está bloqueado */}
+
                       {!isBloqueado && (
                         <button
                           onClick={() => {
-                            // Navegar a la primera lección del módulo
                             if (modulo.lecciones && modulo.lecciones.length > 0) {
                               const primeraLeccion = modulo.lecciones[0];
                               navigate(`/student/courses/${id}/modules/${modulo.id}/lessons/${primeraLeccion.id}`);
@@ -649,7 +587,7 @@ export function CourseDetailPage() {
         )}
       </div>
 
-      {/* SECCIÓN DE CIERRE DE CURSO — Se muestra solo cuando todos los módulos están al 100% y hay examen final */}
+      {/* SECCIÓN DE CIERRE DE CURSO — visible cuando todos los módulos están al 100% y hay examen final */}
       {progresoGeneral === 100 && cierre.examenFinalId && (
         <div className="mt-12 space-y-5 border-t-2 border-dashed border-slate-200 pt-10">
           <div className="mb-6">
@@ -665,7 +603,6 @@ export function CourseDetailPage() {
           }`}>
             <div className="p-6 flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                {/* Número de paso */}
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
                   cierre.examenRendido ? 'bg-green-500 text-white' : 'bg-[#064D91] text-white'
                 }`}>
@@ -688,32 +625,17 @@ export function CourseDetailPage() {
               </div>
 
               <div className="flex-shrink-0">
-                {!cierre.examenRendido && (
-                  <Button onClick={handleIrAExamen}>
-                    Rendir Examen
-                  </Button>
-                )}
-                {cierre.examenRendido && !cierre.examenValidado && (
-                  <div className="text-right">
-                    <Badge variant="warning">Esperando validación</Badge>
-                    <p className="text-xs text-slate-400 mt-1">La institución está revisando tu examen</p>
-                  </div>
-                )}
-                {cierre.examenValidado && cierre.examenAprobado === true && (
-                  <Badge variant="success">Aprobado ✓</Badge>
-                )}
-                {cierre.examenValidado && cierre.examenAprobado === false && (
-                  <div className="text-right">
-                    <Badge variant="danger">No aprobado</Badge>
-                    <p className="text-xs text-slate-400 mt-1">Contacta a tu relator</p>
-                  </div>
+                {!cierre.examenRendido ? (
+                  <Button onClick={handleIrAExamen}>Rendir Examen</Button>
+                ) : (
+                  <Badge variant="success">Completado ✓</Badge>
                 )}
               </div>
             </div>
           </div>
 
-          {/* ── Card 2: Encuesta de Satisfacción — visible solo si examen aprobado ── */}
-          {cierre.examenValidado && cierre.examenAprobado && (
+          {/* ── Card 2: Encuesta de Satisfacción — visible apenas el examen esté rendido ── */}
+          {cierre.examenRendido && (
             <div className={`bg-white rounded-xl border-2 transition-all shadow-sm ${
               !cierre.encuestaHecha ? 'border-[#52A9B7]' : 'border-slate-200'
             }`}>
@@ -819,8 +741,6 @@ export function CourseDetailPage() {
 }
 
 // ── Componente ModalEncuesta ──────────────────────────────────────────────────
-// Formulario inline sencillo. Cuando haya un endpoint de encuestas real
-// solo hay que apuntar el POST al endpoint correcto.
 
 interface ModalEncuestaProps {
   inscripcionId: number;
@@ -828,9 +748,9 @@ interface ModalEncuestaProps {
 }
 
 function ModalEncuesta({ inscripcionId, onEnviada }: ModalEncuestaProps) {
-  const [abierto, setAbierto] = useState(false);
+  const [abierto, setAbierto]     = useState(false);
   const [comentario, setComentario] = useState('');
-  const [enviando, setEnviando] = useState(false);
+  const [enviando, setEnviando]   = useState(false);
 
   const preguntas = [
     '¿Cómo calificarías el contenido del curso?',
@@ -846,24 +766,22 @@ function ModalEncuesta({ inscripcionId, onEnviada }: ModalEncuestaProps) {
     }
     try {
       setEnviando(true);
-      // Obtener la encuesta activa (tipo satisfaccion_curso)
       const encuestaRes = await api.get('/encuestas/', { params: { activa: true } });
-      const encuestas = encuestaRes.data?.results || encuestaRes.data || [];
-      const encuesta = encuestas.find((e: any) => e.tipo === 'satisfaccion_curso') || encuestas[0];
+      const encuestas   = encuestaRes.data?.results || encuestaRes.data || [];
+      const encuesta    = encuestas.find((e: any) => e.tipo === 'satisfaccion_curso') || encuestas[0];
       if (!encuesta) throw new Error('No hay encuesta activa configurada');
 
-      // Construir respuestas en el formato del modelo JSONField
       const respuestasJson: Record<string, number | string> = {};
       preguntas.forEach((_, idx) => { respuestasJson[String(idx + 1)] = respuestas[idx]; });
       if (comentario.trim()) respuestasJson['comentario'] = comentario;
 
       await api.post('/respuestas-encuesta/', {
-        encuesta: encuesta.id,
+        encuesta:    encuesta.id,
         inscripcion: inscripcionId,
-        respuestas: respuestasJson,
+        respuestas:  respuestasJson,
       });
 
-      // Intentar generar diploma automáticamente tras completar encuesta
+      // Intentar generar diploma automáticamente
       try {
         await api.post('/diplomas/generar/', { inscripcion_id: inscripcionId });
       } catch (diplomaErr) {
@@ -874,7 +792,6 @@ function ModalEncuesta({ inscripcionId, onEnviada }: ModalEncuestaProps) {
       onEnviada();
     } catch (err) {
       console.error('Error al enviar encuesta:', err);
-      // Si falla, igual marcamos como hecha para no bloquear al estudiante
       setAbierto(false);
       onEnviada();
     } finally {
@@ -891,7 +808,6 @@ function ModalEncuesta({ inscripcionId, onEnviada }: ModalEncuestaProps) {
       {abierto && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
-            {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-slate-100">
               <div>
                 <h3 className="text-lg font-bold text-slate-800">Encuesta de Satisfacción</h3>
@@ -904,7 +820,6 @@ function ModalEncuesta({ inscripcionId, onEnviada }: ModalEncuestaProps) {
               </button>
             </div>
 
-            {/* Preguntas */}
             <div className="p-6 space-y-6">
               {preguntas.map((pregunta, idx) => (
                 <div key={idx}>
@@ -915,7 +830,7 @@ function ModalEncuesta({ inscripcionId, onEnviada }: ModalEncuestaProps) {
                         key={val}
                         onClick={() => {
                           const nuevas = [...respuestas];
-                          nuevas[idx] = val;
+                          nuevas[idx]  = val;
                           setRespuestas(nuevas);
                         }}
                         className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${
@@ -936,7 +851,6 @@ function ModalEncuesta({ inscripcionId, onEnviada }: ModalEncuestaProps) {
                 </div>
               ))}
 
-              {/* Comentario libre */}
               <div>
                 <p className="text-sm font-semibold text-slate-700 mb-2">Comentarios adicionales (opcional)</p>
                 <textarea
@@ -949,7 +863,6 @@ function ModalEncuesta({ inscripcionId, onEnviada }: ModalEncuestaProps) {
               </div>
             </div>
 
-            {/* Acciones */}
             <div className="flex gap-3 p-6 border-t border-slate-100">
               <button
                 onClick={() => setAbierto(false)}

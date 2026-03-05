@@ -294,7 +294,6 @@ export function ExamenPage() {
   const normalizarOpciones = (pregunta: Pregunta): Opcion[] => {
     const raw = pregunta.opciones;
     if (Array.isArray(raw)) {
-      // Ya viene como array: [{ id: 1, texto: '...' }] o ['opcion a', 'opcion b']
       return raw.map((item: any, idx: number) =>
         typeof item === 'object' && item.id !== undefined
           ? item
@@ -302,7 +301,6 @@ export function ExamenPage() {
       );
     }
     if (typeof raw === 'object') {
-      // Viene como dict: { "0": "texto", "1": "texto" }
       return Object.entries(raw).map(([k, v]) => ({ id: Number(k), texto: String(v) }));
     }
     return [];
@@ -359,7 +357,7 @@ export function ExamenPage() {
         subtitulo={
           fase === 'enviando'
             ? 'Por favor no cierres esta ventana.'
-            : 'Tu examen fue recibido correctamente. El relator revisará tu intento y pronto recibirás tu resultado.'
+            : 'Tu examen fue recibido y calificado correctamente. Vuelve al curso para continuar con los siguientes pasos.'
         }
         variante={fase === 'enviando' ? 'cargando' : 'exito'}
         accion={
