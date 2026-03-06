@@ -20,9 +20,7 @@ import {
   Award, 
   BarChart3, 
   Bell, 
-  User,
-  Clock // Añadido para el mensaje de espera
-} from 'lucide-react';
+  User} from 'lucide-react';
 
 // Tipos de estado del módulo
 type EstadoModulo = 'completado' | 'en_progreso' | 'bloqueado';
@@ -733,7 +731,10 @@ export function CourseDetailPage() {
           {/* ── Card 3: Diploma o Mensaje de Espera ── */}
           {cierre.encuestaHecha && (
             <>
-              {/* CASO A: APROBADO -> Mostrar Diploma */}
+            {/* ── Card 3: Diploma o Resultado Final ── */}
+          {cierre.encuestaHecha && (
+            <>
+              {/* CASO A: APROBADO -> Mostrar Diploma inmediatamente */}
               {inscripcion?.estado === 'aprobado' ? (
                 <div className="bg-gradient-to-r from-[#064D91] via-[#088395] to-[#06B6D4] rounded-xl p-8 text-white shadow-xl animate-in fade-in zoom-in duration-500">
                   <div className="flex items-center justify-between gap-6">
@@ -746,13 +747,14 @@ export function CourseDetailPage() {
                         ¡Felicitaciones, {user?.nombre_completo || user?.username}!
                       </h3>
                       <p className="text-white/80">
-                        Has cumplido todos los requisitos. Tu diploma está listo para descargar.
+                        Has aprobado el curso exitosamente. Tu diploma está disponible para descarga.
                       </p>
                     </div>
 
-                    {cierre.diplomaUrl && (
+                    {/* BOTÓN RESTABLECIDO Y MEJORADO: Lee directamente de la inscripción */}
+                    {inscripcion?.diploma_url && (
                       <a
-                        href={cierre.diplomaUrl}
+                        href={inscripcion.diploma_url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex-shrink-0 flex items-center gap-2 bg-white text-[#064D91] font-bold px-8 py-4 rounded-xl hover:bg-blue-50 transition-colors text-base shadow-lg"
@@ -765,29 +767,26 @@ export function CourseDetailPage() {
                     )}
                   </div>
                 </div>
-              ) : (
-                /* CASO B: COMPLETADO (pero no aprobado) -> Mostrar mensaje de espera */
-                <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-8 shadow-sm flex items-start gap-4 animate-in slide-in-from-bottom-4 duration-500">
-                  <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Clock className="text-amber-600" size={24} />
+              ) : (inscripcion?.estado === 'reprobado') ? (
+                /* CASO B: REPROBADO -> Mostrar mensaje de error */
+                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-8 shadow-sm flex items-start gap-4 animate-in slide-in-from-bottom-4 duration-500">
+                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-amber-900 mb-1">
-                      Procesando aprobación final
+                    <h3 className="text-lg font-bold text-red-900 mb-1">
+                      Curso no aprobado
                     </h3>
-                    <p className="text-amber-800 text-sm leading-relaxed">
-                      Has completado todas las lecciones y la encuesta. El sistema está validando tus notas del examen final y asistencias para generar tu certificado oficial.
+                    <p className="text-red-800 text-sm leading-relaxed">
+                      Lamentablemente no has alcanzado la nota mínima requerida para obtener la certificación de este curso. Si tienes dudas sobre tu calificación, contacta con tu administrador.
                     </p>
-                    <div className="mt-4 flex items-center gap-2 text-xs font-bold text-amber-600 uppercase tracking-widest">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                      </span>
-                      Estado actual: Pendiente de validación
-                    </div>
                   </div>
                 </div>
-              )}
+              ) : null}
+            </>
+          )}
             </>
           )}
         </div>

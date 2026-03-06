@@ -16,6 +16,10 @@ export interface Inscripcion {
   nota_final?: number;
   puede_generar_diploma?: boolean;  // ← Campo calculado del serializer
   updated_at?: string;
+  diploma_url?: string;
+  diploma_generado?: boolean;
+  diploma_codigo_validacion?: string;
+  fecha_diploma?: string;
 }
 
 class InscripcionService extends BaseService<Inscripcion> {
