@@ -266,8 +266,15 @@ export function CourseDetailPage() {
       const respuestasEncuesta = encuestaRes.data?.results || encuestaRes.data || [];
       const encuestaHecha = respuestasEncuesta.length > 0;
 
-      // Diploma
-      const diplomaUrl = (insc as any).diploma_url ?? null;
+      // Diploma — re-fetch inscripción para obtener diploma_url actualizado
+      let diplomaUrl: string | null = null;
+      try {
+        const inscActualRes = await api.get(`/inscripciones/${insc.id}/`);
+        diplomaUrl = inscActualRes.data?.diploma_url ?? null;
+        setInscripcion(inscActualRes.data);
+      } catch {
+        diplomaUrl = (insc as any).diploma_url ?? null;
+      }
 
       setCierre({
         examenFinalId: examenFinal.id,
@@ -288,6 +295,8 @@ export function CourseDetailPage() {
 
   const handleEncuestaEnviada = async () => {
     if (inscripcion && id) {
+      // Breve pausa para que el backend termine de generar el diploma
+      await new Promise(resolve => setTimeout(resolve, 1500));
       await cargarEstadoCierre(parseInt(id), inscripcion);
     }
   };
@@ -731,9 +740,6 @@ export function CourseDetailPage() {
           {/* ── Card 3: Diploma o Mensaje de Espera ── */}
           {cierre.encuestaHecha && (
             <>
-            {/* ── Card 3: Diploma o Resultado Final ── */}
-          {cierre.encuestaHecha && (
-            <>
               {/* CASO A: APROBADO -> Mostrar Diploma inmediatamente */}
               {inscripcion?.estado === 'aprobado' ? (
                 <div className="bg-gradient-to-r from-[#064D91] via-[#088395] to-[#06B6D4] rounded-xl p-8 text-white shadow-xl animate-in fade-in zoom-in duration-500">
@@ -785,8 +791,6 @@ export function CourseDetailPage() {
                   </div>
                 </div>
               ) : null}
-            </>
-          )}
             </>
           )}
         </div>
