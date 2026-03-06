@@ -43,6 +43,7 @@ interface ModuloConEstado extends Modulo {
   totalGuias: number;
   totalEvaluaciones: number;
   examenIntermedioId: number | null;
+  examenAprobado: boolean;   // true si tiene al menos un intento completado con aprobado=true
   lecciones?: Leccion[];
 }
 
@@ -126,66 +127,104 @@ export function CourseDetailPage() {
         const evalRes = await api.get('/evaluaciones/', { params: { tipo: 'sumativa' } });
         const todasEvaluaciones = evalRes.data?.results || evalRes.data || [];
 
-        const modulosConEstado = await Promise.all(
+        // Traer todos los intentos del estudiante en esta inscripción de una sola vez.
+        // Así no necesitamos hacer N llamadas (una por módulo) para saber si cada
+        // examen intermedio está aprobado.
+        let todosLosIntentos: any[] = [];
+        if (inscripcionActual) {
+          const intentosRes = await api.get('/intentos-evaluacion/', {
+            params: { inscripcion: inscripcionActual.id },
+          });
+          todosLosIntentos = intentosRes.data?.results || intentosRes.data || [];
+        }
+
+        // ¿Tiene el estudiante algún intento aprobado en esta evaluación?
+        const estaAprobado = (evaluacionId: number | null): boolean => {
+          if (!evaluacionId) return false;
+          return todosLosIntentos.some(
+            (i) => i.evaluacion === evaluacionId && i.estado === 'completado' && i.aprobado === true
+          );
+        };
+
+        // Primera pasada: construir datos base de cada módulo (sin estado de desbloqueo aún,
+        // porque para desbloquear el módulo N necesitamos saber si el módulo N-1 está listo).
+        const modulosBase = await Promise.all(
           modulosData.map(async (modulo) => {
             try {
               const lecciones = await leccionService.getByModulo(modulo.id);
 
-              const totalLecciones    = lecciones.length;
-              const totalVideos       = lecciones.filter(l => l.tipo === 'teorica' || l.tipo === 'mixta').length;
-              const totalGuias        = lecciones.filter(l => l.tipo === 'practica').length;
-              const evalModulo        = todasEvaluaciones.filter((e: any) => e.modulo === modulo.id);
-              const totalEvaluaciones = evalModulo.length;
+              const totalLecciones     = lecciones.length;
+              const totalVideos        = lecciones.filter(l => l.tipo === 'teorica' || l.tipo === 'mixta').length;
+              const totalGuias         = lecciones.filter(l => l.tipo === 'practica').length;
+              const evalModulo         = todasEvaluaciones.filter((e: any) => e.modulo === modulo.id);
+              const totalEvaluaciones  = evalModulo.length;
               const examenIntermedioId = evalModulo[0]?.id ?? null;
 
-              const progresoModulo = progresos.find(p => p.modulo === modulo.id);
-              const progreso   = progresoModulo?.porcentaje_avance ?? 0;
-              const completado = progresoModulo?.completado ?? false;
-
-              let estado: EstadoModulo;
-              if (completado || progreso === 100) {
-                estado = 'completado';
-              } else if (progreso > 0) {
-                estado = 'en_progreso';
-              } else {
-                const esElPrimero = modulo.orden === 1;
-                if (esElPrimero) {
-                  estado = 'en_progreso';
-                } else {
-                  const moduloAnteriorIndex = modulosData.findIndex(m => m.id === modulo.id) - 1;
-                  const moduloAnterior      = modulosData[moduloAnteriorIndex];
-                  const progresoAnterior    = progresos.find(p => p.modulo === moduloAnterior?.id);
-                  estado = progresoAnterior?.completado ? 'en_progreso' : 'bloqueado';
-                }
-              }
+              const progresoModulo    = progresos.find(p => p.modulo === modulo.id);
+              const progreso          = progresoModulo?.porcentaje_avance ?? 0;
+              const leccionesCompletas = (progresoModulo?.completado ?? false) || progreso === 100;
+              const examenAprobado    = examenIntermedioId ? estaAprobado(examenIntermedioId) : true;
+              // Un módulo está "listo" = lecciones 100% Y examen aprobado (o no tiene examen)
+              const moduloListo = leccionesCompletas && examenAprobado;
 
               return {
                 ...modulo,
-                estado,
                 progreso,
                 totalLecciones,
                 totalVideos,
                 totalGuias,
                 totalEvaluaciones,
                 examenIntermedioId,
+                examenAprobado,
                 lecciones,
+                _leccionesCompletas: leccionesCompletas,
+                _moduloListo: moduloListo,
               };
             } catch (err) {
               console.error(`Error al cargar lecciones del módulo ${modulo.id}:`, err);
               return {
                 ...modulo,
-                estado: 'bloqueado' as EstadoModulo,
                 progreso: 0,
                 totalLecciones: 0,
                 totalVideos: 0,
                 totalGuias: 0,
                 totalEvaluaciones: 0,
                 examenIntermedioId: null,
+                examenAprobado: false,
                 lecciones: [],
+                _leccionesCompletas: false,
+                _moduloListo: false,
               };
             }
           })
         );
+
+        // Segunda pasada: asignar estado de desbloqueo usando la info completa de todos los módulos.
+        // El módulo N se desbloquea solo cuando el módulo N-1 tiene lecciones completas Y examen aprobado.
+        const modulosConEstado: ModuloConEstado[] = modulosBase.map((modulo, idx) => {
+          let estado: EstadoModulo;
+
+          if (modulo._moduloListo) {
+            estado = 'completado';
+          } else if (modulo._leccionesCompletas && modulo.examenIntermedioId && !modulo.examenAprobado) {
+            // Lecciones hechas pero el examen está pendiente o fue reprobado → en_progreso
+            // (no bloqueado: el estudiante debe poder seguir accediendo al examen)
+            estado = 'en_progreso';
+          } else if (modulo.progreso > 0) {
+            estado = 'en_progreso';
+          } else {
+            // Sin progreso aún: primer módulo siempre disponible, el resto depende del anterior
+            if (idx === 0) {
+              estado = 'en_progreso';
+            } else {
+              const moduloAnterior = modulosBase[idx - 1];
+              estado = moduloAnterior._moduloListo ? 'en_progreso' : 'bloqueado';
+            }
+          }
+
+          const { _leccionesCompletas: _lc, _moduloListo: _ml, ...rest } = modulo;
+          return { ...rest, estado };
+        });
 
         setModulos(modulosConEstado);
 
@@ -215,9 +254,9 @@ export function CourseDetailPage() {
 
       if (!examenFinal) return; // Sin examen final configurado → no mostrar sección de cierre
 
-      // Buscar intentos completados del estudiante en ese examen
+      // Buscar intentos completados del estudiante en ese examen, filtrando por inscripción
       const intentosRes = await api.get('/intentos-evaluacion/', {
-        params: { evaluacion: examenFinal.id }
+        params: { evaluacion: examenFinal.id, inscripcion: insc.id }
       });
       const intentos: any[] = intentosRes.data?.results || intentosRes.data || [];
       const examenRendido = intentos.some((i: any) => i.estado === 'completado');
@@ -538,12 +577,26 @@ export function CourseDetailPage() {
                         </div>
 
                         {modulo.examenIntermedioId && modulo.estado === 'completado' && (
+                          // Módulo completado = lecciones + examen aprobado → botón de repaso
+                          <button
+                            onClick={() => navigate(`/student/courses/${id}/examen/${modulo.examenIntermedioId}`)}
+                            className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            Examen aprobado ✓
+                          </button>
+                        )}
+
+                        {modulo.examenIntermedioId && modulo.estado === 'en_progreso' && modulo.progreso === 100 && !modulo.examenAprobado && (
+                          // Lecciones completas pero examen pendiente o reprobado → llamada a la acción
                           <button
                             onClick={() => navigate(`/student/courses/${id}/examen/${modulo.examenIntermedioId}`)}
                             className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold rounded-xl transition-colors"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                             </svg>
                             Rendir Examen Intermedio
                           </button>
@@ -589,7 +642,7 @@ export function CourseDetailPage() {
       </div>
 
       {/* SECCIÓN DE CIERRE DE CURSO — visible cuando todos los módulos están al 100% y hay examen final */}
-      {progresoGeneral === 100 && cierre.examenFinalId && (
+      {modulos.length > 0 && modulos.every(m => m.estado === 'completado') && cierre.examenFinalId && (
         <div className="mt-12 space-y-5 border-t-2 border-dashed border-slate-200 pt-10">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-slate-800">Certificación Final</h2>

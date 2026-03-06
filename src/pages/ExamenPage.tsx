@@ -227,7 +227,7 @@ export function ExamenPage() {
     setFase('enviando');
 
     try {
-      // 1. Guardar respuestas una por una
+      // 1. Guardar respuestas una por una (el backend hace upsert, es seguro rellamar)
       const preguntasOrdenadas = [...evaluacion.preguntas].sort((a, b) => a.orden - b.orden);
 
       for (const pregunta of preguntasOrdenadas) {
@@ -246,20 +246,37 @@ export function ExamenPage() {
         }
 
         await api.post('/respuestas-estudiante/', payload).catch(() => {
-          // Si la respuesta ya existía (PATCH), ignorar el error 400
+          // El endpoint hace upsert: si ya existe la respuesta (unique_together), actualiza.
+          // Ignoramos el 400 sólo en ese caso; otros errores se burbujean igual.
         });
       }
 
-      // 2. Calcular puntaje en el backend y cerrar el intento
-      const estado = motivo === 'trampa' ? 'abandonado' : (automatico ? 'tiempo_excedido' : 'completado');
-      await api.patch(`/intentos-evaluacion/${intentoActivo.id}/`, {
-        estado,
-        fecha_fin: new Date().toISOString(),
-        duracion_minutos: Math.round((evaluacion.tiempo_limite_minutos * 60 - segundosRestantes) / 60),
-      });
+      // 2. Trampa o tiempo excedido: marcar el intento directamente sin calcular nota
+      //    (estos estados no cuentan como intento completado para efectos de nota final)
+      if (motivo === 'trampa') {
+        await api.patch(`/intentos-evaluacion/${intentoActivo.id}/`, {
+          estado: 'abandonado',
+          fecha_fin: new Date().toISOString(),
+        });
+        setFase('entregado');
+        return;
+      }
 
-      // 3. Disparar cálculo de nota en el backend
-      await api.post(`/intentos-evaluacion/${intentoActivo.id}/calcular-nota/`).catch(() => {});
+      if (automatico) {
+        // Tiempo agotado: marcar como tiempo_excedido y luego finalizar para calificar
+        await api.patch(`/intentos-evaluacion/${intentoActivo.id}/`, {
+          estado: 'tiempo_excedido',
+          fecha_fin: new Date().toISOString(),
+        });
+      }
+
+      // 3. Llamar a /finalizar/ que:
+      //    - Marca el intento como 'completado' (o lo deja si ya es tiempo_excedido)
+      //    - Calcula puntaje desde las respuestas guardadas en BD
+      //    - Calcula la nota oficial (escala chilena 1.0–7.0)
+      //    - Llama a actualizar_estado_inscripcion_automatico → cierra la inscripción
+      //      si ya se completaron todas las evaluaciones del curso
+      await api.post(`/intentos-evaluacion/${intentoActivo.id}/finalizar/`);
 
       setFase('entregado');
     } catch (err: any) {
