@@ -1,6 +1,7 @@
 // src/pages/CourseDetailPage.tsx
 // BASADO EN MOCKUP HTML - vista_curso.html
 import { useEffect, useState, useCallback } from 'react';
+import senceService from '@/api/services/senceService';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -55,6 +56,9 @@ export function CourseDetailPage() {
   const [inscripcion, setInscripcion] = useState<Inscripcion | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sesionSenceId, setSesionSenceId] = useState<number | null>(null);
+  const [senceLoading, setSenceLoading]   = useState(false);
+  const [senceError, setSenceError]       = useState<string | null>(null);
 
   const [cierre, setCierre] = useState<EstadoCierre>({
     examenFinalId: null,
@@ -105,7 +109,20 @@ export function CourseDetailPage() {
 
         // 1. Obtener curso
         const cursoData = await cursoService.getById(parseInt(id));
+
+        // Guard: curso no accesible por fechas
+        const et = cursoData.estado_temporal;
+        if (et === 'programado' || et === 'cerrado') {
+          const msg = et === 'programado'
+            ? `Este curso aún no está disponible. Comienza el ${new Date(cursoData.fecha_inicio!).toLocaleDateString('es-CL')}.`
+            : 'Este curso ya ha finalizado.';
+          setError(msg);
+          setLoading(false);
+          return;
+        }
+
         setCurso(cursoData);
+        
 
         // 2. Obtener módulos
         const modulosData = await moduloService.getByCurso(parseInt(id));
@@ -242,6 +259,23 @@ export function CourseDetailPage() {
     fetchCourseData();
   }, [id]);
 
+  // Leer resultado del callback SENCE y verificar sesión activa
+  useEffect(() => {
+    if (!inscripcion) return;
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get('sence_error')) {
+      setSenceError('Hubo un problema al registrar tu sesión en SENCE. Intenta nuevamente.');
+    }
+
+    // Verificar si hay sesión activa (para mostrar botón de cierre)
+    senceService.getSesionActiva(inscripcion.id).then((res) => {
+      if (res.tiene_sesion_activa && res.sesion) {
+        setSesionSenceId(res.sesion.id);
+      }
+    }).catch(() => {});
+  }, [inscripcion]);
+
   // Carga el estado de las cards de cierre: examen final, encuesta, diploma
   const cargarEstadoCierre = useCallback(async (cursoId: number, insc: Inscripcion) => {
     try {
@@ -298,6 +332,32 @@ export function CourseDetailPage() {
       // Breve pausa para que el backend termine de generar el diploma
       await new Promise(resolve => setTimeout(resolve, 1500));
       await cargarEstadoCierre(parseInt(id), inscripcion);
+    }
+  };
+
+  const handleIniciarSence = async () => {
+  if (!inscripcion) return;
+  try {
+    setSenceLoading(true);
+    setSenceError(null);
+    const datos = await senceService.prepararInicio(inscripcion.id);
+    senceService.redirigirASence(datos.url_sence, datos.datos_formulario);
+  } catch (err: any) {
+    setSenceError(err?.response?.data?.error || 'Error al conectar con SENCE.');
+    setSenceLoading(false);
+  }
+};
+
+  const handleCerrarSence = async () => {
+    if (!sesionSenceId) return;
+    try {
+      setSenceLoading(true);
+      setSenceError(null);
+      const datos = await senceService.prepararCierre(sesionSenceId);
+      senceService.redirigirASence(datos.url_sence, datos.datos_formulario);
+    } catch (err: any) {
+      setSenceError(err?.response?.data?.error || 'Error al cerrar sesión SENCE.');
+      setSenceLoading(false);
     }
   };
 
@@ -394,6 +454,13 @@ export function CourseDetailPage() {
     );
   }
 
+  // Calcular días restantes para banners
+  const diasParaCierre = curso.fecha_fin
+    ? Math.ceil((new Date(curso.fecha_fin).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null;
+  const mostrarBannerUrgente  = diasParaCierre !== null && diasParaCierre <= 1 && diasParaCierre >= 0;
+  const mostrarBannerSuave    = diasParaCierre !== null && diasParaCierre <= 7 && diasParaCierre > 1;
+
   const progresoGeneral = modulos.length > 0
     ? Math.round(modulos.reduce((acc, m) => acc + m.progreso, 0) / modulos.length)
     : 0;
@@ -413,6 +480,70 @@ export function CourseDetailPage() {
       headerTitle={curso.nombre}
       headerSubtitle={curso.codigo_sence_data?.codigo ? `Código SENCE: ${curso.codigo_sence_data.codigo}` : ''}
     >
+      {/* ── Banners de cierre próximo ── */}
+{mostrarBannerUrgente && (
+  <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+    <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+    </svg>
+    <p className="text-sm font-semibold text-red-700">
+      ⚠️ El curso cierra en menos de 24 horas. Asegúrate de completar todas las actividades pendientes.
+    </p>
+  </div>
+)}
+{mostrarBannerSuave && (
+  <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
+    <svg className="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+    <p className="text-sm font-medium text-amber-700">
+      El curso finaliza en <span className="font-bold">{diasParaCierre} días</span> ({new Date(curso.fecha_fin!).toLocaleDateString('es-CL')}). Organiza tu tiempo para completarlo.
+    </p>
+  </div>
+)}
+
+  {/* ── Bloque SENCE (solo cursos sincronizados) ── */}
+  {curso.sincronizado_con_sence && inscripcion && (
+    <div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between gap-4">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+          <svg className="w-5 h-5 text-jc-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+        <div>
+          <p className="text-sm font-bold text-jc-blue">Curso con registro SENCE</p>
+          <p className="text-xs text-slate-500">
+            {sesionSenceId
+              ? 'Sesión activa. Recuerda cerrar tu sesión al terminar.'
+              : 'Debes iniciar sesión con ClaveÚnica para que tu asistencia quede registrada.'}
+          </p>
+        </div>
+      </div>
+      <div className="flex-shrink-0">
+        {senceError && (
+          <p className="text-xs text-red-600 mb-2 text-right">{senceError}</p>
+        )}
+        {sesionSenceId ? (
+          <button
+            onClick={handleCerrarSence}
+            disabled={senceLoading}
+            className="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white text-sm font-bold rounded-lg transition-colors disabled:opacity-50"
+          >
+            {senceLoading ? 'Redirigiendo...' : 'Cerrar sesión SENCE'}
+          </button>
+        ) : (
+          <button
+            onClick={handleIniciarSence}
+            disabled={senceLoading}
+            className="px-4 py-2 bg-jc-blue hover:bg-jc-blue/90 text-white text-sm font-bold rounded-lg transition-colors disabled:opacity-50"
+          >
+            {senceLoading ? 'Redirigiendo...' : 'Iniciar sesión SENCE'}
+          </button>
+        )}
+      </div>
+    </div>
+  )}
       {/* HERO SECTION */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
         <div className="relative h-64 bg-slate-900">

@@ -55,6 +55,9 @@ export interface Curso {
   modulos?: Modulo[];
   created_at?: string;
   updated_at?: string;
+  estado_temporal?: 'borrador' | 'programado' | 'en_curso' | 'cerrado';
+  sincronizado_con_sence?: boolean;
+  dias_gracia?: number;
 }
 
 class CursoService extends BaseService<Curso> {

@@ -470,6 +470,9 @@ export function AdminCursosPage() {
                   )}
                   <div className="flex gap-2">
                     <Button variant="ghost" onClick={handleCloseModal}>Cerrar</Button>
+                    <Button variant="ghost" onClick={() => { handleCloseModal(); navigate(`/admin/cursos/${cursoSeleccionado.id}/editar`); }}>
+                      Edición avanzada
+                    </Button>
                     <Button onClick={handleGuardarCambios} isLoading={isSaving}>
                       <Save size={16} className="mr-2" /> Guardar Cambios
                     </Button>

@@ -35,6 +35,8 @@ export interface DatosCurso {
   relatores: number[];
   imagen_portada: File | null;
   imagen_url?: string;
+  dias_gracia: number;
+  sincronizado_con_sence: boolean;
 }
 
 // Paso 2 — Módulos (en memoria, sin ID de backend aún)
@@ -86,6 +88,8 @@ const CURSO_INICIAL: DatosCurso = {
   relatores: [],
   imagen_portada: null,
   imagen_url: undefined,
+  dias_gracia: 0,
+  sincronizado_con_sence: false,
 };
 
 const ESTADO_INICIAL: WizardState = {
@@ -287,7 +291,10 @@ export function useCursoWizard() {
           : `CURSO-${Date.now()}`,
         ...(curso.codigo_sence ? { codigo_sence: curso.codigo_sence } : {}),
         ...(curso.fecha_inicio ? { fecha_inicio: curso.fecha_inicio } : {}),
-        ...(curso.fecha_fin    ? { fecha_fin: curso.fecha_fin }       : {}),
+       ...(curso.fecha_fin    ? { fecha_fin: curso.fecha_fin }       : {}),
+          dias_gracia: curso.dias_gracia ?? 0,
+          sincronizado_con_sence: curso.sincronizado_con_sence ?? false,
+        
       };
 
       // Nota: imagen_portada se subiría por separado con FormData si el backend lo requiere.

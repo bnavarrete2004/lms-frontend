@@ -118,14 +118,28 @@ export function StudentCoursesPage() {
   ];
 
   const getStatusLabel = (estado: string) => {
-    const labels: Record<string, { text: string; variant: any }> = {
-      en_curso: { text: 'En Curso', variant: 'info' },
-      inscrito: { text: 'Por Iniciar', variant: 'warning' },
-      completado: { text: 'Finalizado', variant: 'success' },
-      aprobado: { text: 'Aprobado', variant: 'success' },
-      reprobado: { text: 'No Aprobado', variant: 'danger' },
-    };
-    return labels[estado] || { text: estado, variant: 'default' };
+  const labels: Record<string, { text: string; variant: any }> = {
+    en_curso:   { text: 'En Curso',     variant: 'info' },
+    inscrito:   { text: 'Por Iniciar',  variant: 'warning' },
+    completado: { text: 'Finalizado',   variant: 'success' },
+    aprobado:   { text: 'Aprobado',     variant: 'success' },
+    reprobado:  { text: 'No Aprobado',  variant: 'danger' },
+  };
+  return labels[estado] || { text: estado, variant: 'default' };
+};
+
+// Chip del estado temporal del curso (fechas)
+  const getTemporalChip = (estadoTemporal?: string, fechaInicio?: string) => {
+    if (estadoTemporal === 'programado') {
+      const fecha = fechaInicio
+        ? new Date(fechaInicio).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        : '';
+      return { mostrar: true, texto: `Disponible el ${fecha}`, clases: 'bg-amber-100 text-amber-700' };
+    }
+    if (estadoTemporal === 'cerrado') {
+      return { mostrar: true, texto: 'Curso finalizado', clases: 'bg-slate-100 text-slate-500' };
+    }
+    return { mostrar: false, texto: '', clases: '' };
   };
 
   return (
@@ -186,15 +200,27 @@ export function StudentCoursesPage() {
           <div className="grid grid-cols-1 gap-4">
             {cursosFiltrados.map((i) => {
               const status = getStatusLabel(i.estado);
+              const estadoTemporal = i.curso_data?.estado_temporal;
+              const bloqueado = estadoTemporal === 'programado' || estadoTemporal === 'cerrado';
+              const chip = getTemporalChip(estadoTemporal, i.curso_data?.fecha_inicio);
+
               return (
-                <div 
-                  key={i.id} 
-                  onClick={() => navigate(`/student/courses/${i.curso}`)}
-                  className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-lg transition-all cursor-pointer group flex items-center justify-between"
+                <div
+                  key={i.id}
+                  onClick={() => { if (!bloqueado) navigate(`/student/courses/${i.curso}`); }}
+                  className={`bg-white rounded-2xl border border-slate-200 p-6 transition-all flex items-center justify-between
+                    ${bloqueado
+                      ? 'opacity-60 cursor-not-allowed'
+                      : 'hover:shadow-lg cursor-pointer group'
+                    }`}
                 >
                   <div className="flex items-center gap-6">
                     <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
-                      <img src={i.curso_data?.imagen_portada || "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=200"} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Curso" />
+                      <img
+                        src={i.curso_data?.imagen_portada || "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=200"}
+                        className={`w-full h-full object-cover transition-transform duration-500 ${!bloqueado ? 'group-hover:scale-110' : ''}`}
+                        alt="Curso"
+                      />
                     </div>
                     <div>
                       <h3 className="font-bold text-slate-800 text-lg mb-1">{i.curso_data?.nombre}</h3>
@@ -202,15 +228,23 @@ export function StudentCoursesPage() {
                         <span className="flex items-center gap-1"><Clock size={14}/> {i.curso_data?.horas_totales}H Totales</span>
                         <span className="flex items-center gap-1"><CheckCircle size={14}/> {i.porcentaje_avance}% Avance</span>
                       </div>
+                      {/* Chip de estado temporal */}
+                      {chip.mostrar && (
+                        <span className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-semibold ${chip.clases}`}>
+                          {chip.texto}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-8">
                     <div className="text-right">
                       <Badge variant={status.variant}>{status.text}</Badge>
-                      <p className="text-[10px] text-slate-400 mt-1 font-bold">INSCRITO: {new Date(i.fecha_inscripcion).toLocaleDateString()}</p>
+                      <p className="text-[10px] text-slate-400 mt-1 font-bold">
+                        INSCRITO: {new Date(i.fecha_inscripcion).toLocaleDateString()}
+                      </p>
                     </div>
-                    <ChevronRight className="text-slate-300 group-hover:text-jc-blue group-hover:translate-x-1 transition-all" />
+                    <ChevronRight className={`transition-all ${bloqueado ? 'text-slate-200' : 'text-slate-300 group-hover:text-jc-blue group-hover:translate-x-1'}`} />
                   </div>
                 </div>
               );

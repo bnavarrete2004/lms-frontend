@@ -23,6 +23,8 @@ interface ErroresForm {
   fecha_fin?: string;
   relatores?: string;
   ciudad?: string;
+  dias_gracia?: string;
+  sincronizado_con_sence?: boolean;
 }
 
 interface RelatorResultado {
@@ -143,6 +145,8 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
     } else if (datos.fecha_inicio && datos.fecha_fin <= datos.fecha_inicio) {
       e.fecha_fin = 'La fecha de fin debe ser posterior a la de inicio.';
     }
+    if (datos.dias_gracia < 0 || datos.dias_gracia > 30)
+      e.dias_gracia = 'Los días de gracia deben estar entre 0 y 30.';
 
     if (datos.fecha_inicio && datos.fecha_fin && datos.horas_totales !== '') {
       const inicio = new Date(datos.fecha_inicio);
@@ -263,33 +267,71 @@ export function WizardStep1_InfoBasica({ datos, onChange, onSiguiente, onCancela
           </div>
         </div>
 
-        {/* Fechas */}
-        <div className="grid grid-cols-2 gap-6 mb-6">
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Fecha Inicio <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="date"
-              value={datos.fecha_inicio}
-              onChange={e => onChange({ fecha_inicio: e.target.value })}
-              className={inputCls(errores.fecha_inicio)}
-            />
-            {errores.fecha_inicio && <p className="text-xs text-red-500 mt-1">{errores.fecha_inicio}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Fecha Fin <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="date"
-              value={datos.fecha_fin}
-              onChange={e => onChange({ fecha_fin: e.target.value })}
-              className={inputCls(errores.fecha_fin)}
-            />
-            {errores.fecha_fin && <p className="text-xs text-red-500 mt-1">{errores.fecha_fin}</p>}
-          </div>
-        </div>
+        {/* Fechas + Días de gracia */}
+<div className="grid grid-cols-2 gap-6 mb-6">
+  <div>
+    <label className="block text-sm font-semibold text-slate-700 mb-2">
+      Fecha Inicio <span className="text-red-500">*</span>
+    </label>
+    <input
+      type="date"
+      value={datos.fecha_inicio}
+      onChange={e => onChange({ fecha_inicio: e.target.value })}
+      className={inputCls(errores.fecha_inicio)}
+    />
+    {errores.fecha_inicio && <p className="text-xs text-red-500 mt-1">{errores.fecha_inicio}</p>}
+  </div>
+  <div>
+    <label className="block text-sm font-semibold text-slate-700 mb-2">
+      Fecha Fin <span className="text-red-500">*</span>
+    </label>
+    <input
+      type="date"
+      value={datos.fecha_fin}
+      onChange={e => onChange({ fecha_fin: e.target.value })}
+      className={inputCls(errores.fecha_fin)}
+    />
+    {errores.fecha_fin && <p className="text-xs text-red-500 mt-1">{errores.fecha_fin}</p>}
+  </div>
+</div>
+
+{/* Días de gracia */}
+  <div className="mb-6">
+    <label className="block text-sm font-semibold text-slate-700 mb-2">
+      Días de gracia <span className="text-slate-400 font-normal">(opcional)</span>
+    </label>
+    <div className="flex items-center gap-4">
+      <input
+        type="number"
+        min={0}
+        max={30}
+        value={datos.dias_gracia}
+        onChange={e => onChange({ dias_gracia: Math.max(0, Math.min(30, Number(e.target.value) || 0)) })}
+        className={inputCls(errores.dias_gracia) + ' max-w-[140px]'}
+      />
+      <p className="text-sm text-slate-500">
+        {datos.dias_gracia === 0
+          ? 'El curso cierra exactamente en la fecha de fin.'
+          : `El curso seguirá accesible ${datos.dias_gracia} día${datos.dias_gracia > 1 ? 's' : ''} después de la fecha de fin.`
+        }
+      </p>
+    </div>
+    {errores.dias_gracia && <p className="text-xs text-red-500 mt-1">{errores.dias_gracia}</p>}
+  </div>
+    {/* SENCE */}
+    <div className="mb-6 flex items-center gap-3">
+      <input
+        type="checkbox"
+        id="sincronizado_con_sence"
+        checked={datos.sincronizado_con_sence ?? false}
+        onChange={e => onChange({ sincronizado_con_sence: e.target.checked })}
+        className="w-4 h-4 accent-jc-calipso cursor-pointer"
+      />
+      <label htmlFor="sincronizado_con_sence" className="text-sm font-semibold text-slate-700 cursor-pointer">
+        Curso con registro SENCE <span className="text-slate-400 font-normal text-xs ml-1">(habilita inicio/cierre de sesión con ClaveÚnica)</span>
+      </label>
+    </div>
+  
 
         {/* ── Buscador de Relatores ── */}
         <div className="mb-6">

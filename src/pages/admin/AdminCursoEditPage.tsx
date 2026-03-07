@@ -80,29 +80,88 @@ export function AdminCursoEditPage() {
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input 
-              label="Horas Totales" 
-              type="number"
-              value={formData.horas_totales || ''} 
-              onChange={e => setFormData({...formData, horas_totales: Number(e.target.value)})}
-              required
-            />
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-2">Estado del Curso</label>
-              <select 
-                className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jc-calipso/20 focus:border-jc-calipso outline-none transition"
-                value={formData.estado || 'borrador'}
-                onChange={e => setFormData({...formData, estado: e.target.value as any})}
-              >
-                <option value="activo">Activo (Visible)</option>
-                <option value="borrador">Borrador (Edición)</option>
-                <option value="inactivo">Inactivo (Archivado)</option>
-              </select>
-            </div>
-          </div>
+  <Input 
+    label="Horas Totales" 
+    type="number"
+    value={formData.horas_totales || ''} 
+    onChange={e => setFormData({...formData, horas_totales: Number(e.target.value)})}
+    required
+  />
+  <div className="flex flex-col">
+    <label className="text-sm font-medium text-gray-700 mb-2">Estado del Curso</label>
+    <select 
+      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jc-calipso/20 focus:border-jc-calipso outline-none transition"
+      value={formData.estado || 'borrador'}
+      onChange={e => setFormData({...formData, estado: e.target.value as any})}
+    >
+      <option value="activo">Activo (Visible)</option>
+      <option value="borrador">Borrador (Edición)</option>
+      <option value="inactivo">Inactivo (Archivado)</option>
+    </select>
+  </div>
+</div>
+
+  {/* Fechas */}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="flex flex-col">
+      <label className="text-sm font-medium text-gray-700 mb-2">Fecha de Inicio</label>
+      <input
+        type="date"
+        className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jc-calipso/20 focus:border-jc-calipso outline-none transition"
+        value={formData.fecha_inicio || ''}
+        onChange={e => setFormData({...formData, fecha_inicio: e.target.value})}
+      />
+    </div>
+    <div className="flex flex-col">
+      <label className="text-sm font-medium text-gray-700 mb-2">Fecha de Fin</label>
+      <input
+        type="date"
+        className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jc-calipso/20 focus:border-jc-calipso outline-none transition"
+        value={formData.fecha_fin || ''}
+        onChange={e => setFormData({...formData, fecha_fin: e.target.value})}
+      />
+    </div>
+  </div>
+
+  {/* Días de gracia */}
+  <div className="flex flex-col">
+    <label className="text-sm font-medium text-gray-700 mb-2">
+      Días de gracia <span className="text-slate-400 font-normal text-xs ml-1">(acceso extra tras la fecha de fin)</span>
+    </label>
+    <div className="flex items-center gap-4">
+      <input
+        type="number"
+        min={0}
+        max={30}
+        className="w-32 px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jc-calipso/20 focus:border-jc-calipso outline-none transition"
+        value={formData.dias_gracia ?? 0}
+        onChange={e => setFormData({...formData, dias_gracia: Math.max(0, Math.min(30, Number(e.target.value) || 0))})}
+      />
+      <p className="text-sm text-slate-500">
+        {!formData.dias_gracia || formData.dias_gracia === 0
+          ? 'El curso cierra exactamente en la fecha de fin.'
+          : `El curso seguirá accesible ${formData.dias_gracia} día${formData.dias_gracia > 1 ? 's' : ''} después de la fecha de fin.`
+        }
+      </p>
+    </div>
+  </div>
 
           <div className="flex flex-col">
             <label className="text-sm font-medium text-gray-700 mb-2">Descripción General</label>
+             {/* AGREGAR ESTO ENTRE ESOS DOS DIVS */}
+              {/* SENCE */}
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="sincronizado_con_sence"
+                  checked={formData.sincronizado_con_sence ?? false}
+                  onChange={e => setFormData({...formData, sincronizado_con_sence: e.target.checked})}
+                  className="w-4 h-4 accent-jc-calipso cursor-pointer"
+                />
+                <label htmlFor="sincronizado_con_sence" className="text-sm font-medium text-gray-700 cursor-pointer">
+                  Curso con registro SENCE <span className="text-slate-400 font-normal text-xs ml-1">(habilita inicio/cierre de sesión con ClaveÚnica)</span>
+                </label>
+              </div>
             <textarea 
               className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jc-calipso/20 focus:border-jc-calipso outline-none transition h-40 resize-none"
               value={formData.descripcion || ''}
