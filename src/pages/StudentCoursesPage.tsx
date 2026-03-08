@@ -202,15 +202,17 @@ export function StudentCoursesPage() {
               const status = getStatusLabel(i.estado);
               const estadoTemporal = i.curso_data?.estado_temporal;
               const bloqueado = estadoTemporal === 'programado' || estadoTemporal === 'cerrado';
+              console.log('curso:', i.curso, 'estadoTemporal:', estadoTemporal, 'bloqueado:', bloqueado);
               const chip = getTemporalChip(estadoTemporal, i.curso_data?.fecha_inicio);
 
               return (
                 <div
                   key={i.id}
                   onClick={() => { if (!bloqueado) navigate(`/student/courses/${i.curso}`); }}
+                  style={bloqueado ? { opacity: 0.4, pointerEvents: 'none' } : {}}
                   className={`bg-white rounded-2xl border border-slate-200 p-6 transition-all flex items-center justify-between
                     ${bloqueado
-                      ? 'opacity-60 cursor-not-allowed'
+                      ? 'cursor-not-allowed'
                       : 'hover:shadow-lg cursor-pointer group'
                     }`}
                 >

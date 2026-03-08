@@ -202,17 +202,25 @@ export function DashboardPage() {
               </Alert>
             ) : inscripcionesActivas.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {inscripcionesActivas.map((inscripcion) => (
-                  <CourseCard
+                {inscripcionesActivas.map((inscripcion) => {
+                const estadoTemporal = inscripcion.curso_data?.estado_temporal;
+                const bloqueado = estadoTemporal === 'programado' || estadoTemporal === 'cerrado';
+                return (
+                  <div
                     key={inscripcion.id}
-                    title={inscripcion.curso_data?.nombre || 'Sin título'}
-                    image={inscripcion.curso_data?.imagen_portada || ''}
-                    senceId={inscripcion.curso_data?.codigo_sence_data?.codigo}
-                    duration={`${inscripcion.curso_data?.horas_totales || 0} Horas lectivas`}
-                    progress={inscripcion.porcentaje_avance || 0}
-                    onClick={() => handleCourseClick(inscripcion.curso)}
-                  />
-                ))}
+                    style={bloqueado ? { opacity: 0.4, pointerEvents: 'none' } : {}}
+                  >
+                    <CourseCard
+                      title={inscripcion.curso_data?.nombre || 'Sin título'}
+                      image={inscripcion.curso_data?.imagen_portada || ''}
+                      senceId={inscripcion.curso_data?.codigo_sence_data?.codigo}
+                      duration={`${inscripcion.curso_data?.horas_totales || 0} Horas lectivas`}
+                      progress={inscripcion.porcentaje_avance || 0}
+                      onClick={() => { if (!bloqueado) handleCourseClick(inscripcion.curso); }}
+                    />
+                  </div>
+                );
+              })}
               </div>
             ) : (
               <Alert variant="info" title="No tienes cursos activos">
