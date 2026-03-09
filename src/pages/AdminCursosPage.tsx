@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, FileSearch, BookOpen, Users, BarChart3,
+  LayoutDashboard, FileSearch, BookOpen, Users, User, BarChart3,
   FolderTree, FileText, Globe, Settings, Plus, Eye, Pencil,
   X, Trash2, Save, UserPlus, Search,
 } from 'lucide-react';
@@ -228,7 +228,7 @@ export function AdminCursosPage() {
       title: 'Configuración',
       items: [
         { icon: <Globe size={20} />,    label: 'Contenido Público',   href: '/admin/landing' },
-        { icon: <Settings size={20} />, label: 'Ajustes del Sistema', href: '/admin/config' },
+        { icon: <User size={20} />, label: 'Mi Perfil', href: '/admin/config' },
       ],
     },
   ];

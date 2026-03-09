@@ -2,7 +2,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, FileSearch, BookOpen, Users, BarChart3,
+  LayoutDashboard, FileSearch, BookOpen, Users, User, BarChart3,
   FolderTree, FileText, Search, X, Download, Eye, Pencil, 
   Trash2, Video, FileArchive, Save, Globe, 
   Settings, Upload, CloudUpload, CheckCircle
@@ -166,7 +166,7 @@ export function AdminRepoPage() {
       title: 'Configuración',
       items: [
         { icon: <Globe size={20} />, label: 'Contenido Público', href: '/admin/landing' },
-        { icon: <Settings size={20} />, label: 'Ajustes del Sistema', href: '/admin/config' },
+        { icon: <User size={20} />, label: 'Mi Perfil', href: '/admin/config' },
       ],
     },
   ];

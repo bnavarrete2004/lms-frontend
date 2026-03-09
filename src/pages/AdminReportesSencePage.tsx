@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, FileSearch, BookOpen, Users, BarChart3,
+  LayoutDashboard, FileSearch, BookOpen, Users, User, BarChart3,
   FolderTree, FileText, Globe, Settings, Filter, X,
   Download, CheckCircle, XCircle, Clock, TrendingUp,
   ChevronLeft, ChevronRight, Search, RefreshCw,
@@ -35,7 +35,7 @@ function useSidebarSections() {
       title: 'Configuración',
       items: [
         { icon: <Globe    size={20} />, label: 'Contenido Público',   href: '/admin/landing' },
-        { icon: <Settings size={20} />, label: 'Ajustes del Sistema', href: '/admin/config' },
+        { icon: <User size={20} />, label: 'Mi Perfil', href: '/admin/config' },
       ],
     },
   ];

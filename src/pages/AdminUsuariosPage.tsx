@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, FileSearch, BookOpen, Users, BarChart3,
+  LayoutDashboard, FileSearch, BookOpen, Users, User, BarChart3,
   FolderTree, FileText, Globe, Settings, Eye, Pencil, X, Save,
   UserCheck, UserX, ShieldCheck, GraduationCap, Mic2, UserPlus,
   Building2, ChevronDown, Trash2, Search,
@@ -110,7 +110,7 @@ function useSidebarSections() {
       title: 'Configuración',
       items: [
         { icon: <Globe size={20} />,    label: 'Contenido Público',   href: '/admin/landing' },
-        { icon: <Settings size={20} />, label: 'Ajustes del Sistema', href: '/admin/config' },
+        { icon: <User size={20} />, label: 'Mi Perfil', href: '/admin/config' },
       ],
     },
   ];

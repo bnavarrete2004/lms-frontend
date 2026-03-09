@@ -164,14 +164,7 @@ export function WizardStep3_Lecciones({
   const leccionesActivas = leccionesPorModulo(moduloActivoId);
 
   // ── Validación ──────────────────────────────────────────────────────────────
-
   function validar(): boolean {
-    const totalLecciones = lecciones.length;
-    if (totalLecciones === 0) {
-      alert('Debes crear al menos una lección antes de continuar.');
-      return false;
-    }
-
     const nuevosErrores: Record<string, ErroresLeccion> = {};
     let hayErrores = false;
 
@@ -190,7 +183,6 @@ export function WizardStep3_Lecciones({
 
     setErrores(nuevosErrores);
 
-    // Si hay errores en otro módulo, cambiar al primero que tenga errores
     if (hayErrores) {
       const primeraConError = lecciones.find(l => nuevosErrores[l._localId]);
       if (primeraConError && primeraConError.moduloLocalId !== moduloActivoId) {
@@ -212,8 +204,15 @@ export function WizardStep3_Lecciones({
       l.nombre.trim() &&
       l.duracion_minutos !== '' &&
       Number(l.duracion_minutos) >= 5
-    );
-
+    ) &&
+    modulos.every(modulo => {
+      const objetivoMin = (Number(modulo.horas_estimadas) || 0) * 60;
+      const asignadosMin = lecciones
+        .filter(l => l.moduloLocalId === modulo._localId)
+        .reduce((sum, l) => sum + (Number(l.duracion_minutos) || 0), 0);
+      return objetivoMin === 0 || asignadosMin === objetivoMin;
+    });
+  
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
@@ -243,6 +242,42 @@ export function WizardStep3_Lecciones({
           );
         })}
       </div>
+      {/* Indicador de minutos del módulo activo */}
+      {(() => {
+        const moduloActivo = modulos.find(m => m._localId === moduloActivoId);
+        const objetivoMin = (Number(moduloActivo?.horas_estimadas) || 0) * 60;
+        const asignadosMin = leccionesActivas.reduce((sum, l) => sum + (Number(l.duracion_minutos) || 0), 0);
+        const porcentaje = objetivoMin > 0 ? Math.min((asignadosMin / objetivoMin) * 100, 100) : 0;
+        const sePaso = asignadosMin > objetivoMin;
+        const esExacto = asignadosMin === objetivoMin;
+        return objetivoMin > 0 ? (
+          <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-semibold text-slate-700">Minutos asignados en este módulo</span>
+              <span className={`text-sm font-bold ${sePaso ? 'text-red-600' : esExacto ? 'text-green-600' : 'text-slate-600'}`}>
+                {asignadosMin} / {objetivoMin} min
+              </span>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-2.5">
+              <div
+                className={`h-2.5 rounded-full transition-all ${sePaso ? 'bg-red-500' : esExacto ? 'bg-green-500' : 'bg-jc-calipso'}`}
+                style={{ width: `${porcentaje}%` }}
+              />
+            </div>
+            {sePaso && (
+              <p className="text-xs text-red-500 mt-1 font-semibold">
+                Te pasaste por {asignadosMin - objetivoMin} min. Reduce la duración de alguna lección.
+              </p>
+            )}
+            {esExacto && (
+              <p className="text-xs text-green-600 mt-1 font-semibold">¡Perfecto! Has completado exactamente el tiempo del módulo.</p>
+            )}
+            {!sePaso && !esExacto && (
+              <p className="text-xs text-slate-400 mt-1">Faltan {objetivoMin - asignadosMin} min por asignar.</p>
+            )}
+          </div>
+        ) : null;
+      })()}
 
       {/* Botón agregar lección */}
       <div className="mb-6">
