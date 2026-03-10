@@ -1,5 +1,5 @@
 // src/pages/StudentDashboardPage.tsx
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -9,28 +9,37 @@ import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { useApi } from '@/hooks/useApi';
 import { inscripcionService } from '@/api/services/inscripcionService';
+import { cursoService, type Curso } from '@/api/services/cursoService';
 
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  
+
   const handleCourseClick = (cursoId: number) => {
     navigate(`/student/courses/${cursoId}`);
   };
 
-  const { 
-    data: inscripciones, 
-    loading: loadingInscripciones, 
+  const {
+    data: inscripciones,
+    loading: loadingInscripciones,
     error: errorInscripciones,
-    execute: cargarInscripciones 
+    execute: cargarInscripciones
   } = useApi(() => inscripcionService.getMisInscripciones());
+
+  // Catálogo real
+  const [catalogo, setCatalogo] = useState<Curso[]>([]);
+  const [loadingCatalogo, setLoadingCatalogo] = useState(true);
 
   useEffect(() => {
     cargarInscripciones();
+    cursoService.getCatalogo()
+      .then(data => setCatalogo(data))
+      .catch(() => setCatalogo([]))
+      .finally(() => setLoadingCatalogo(false));
   }, []);
 
   const inscripcionesActivas = inscripciones?.filter(i => i.estado === 'en_curso') || [];
-  
+
   const progresoGeneral = inscripciones && inscripciones.length > 0
     ? Math.round(inscripciones.reduce((sum, i) => sum + (i.porcentaje_avance || 0), 0) / inscripciones.length)
     : 0;
@@ -44,7 +53,7 @@ export function DashboardPage() {
       title: 'Menú Principal',
       items: [
         {
-          href: '/student/dashboard', // Conectado
+          href: '/student/dashboard',
           icon: (
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -54,7 +63,7 @@ export function DashboardPage() {
           isActive: true,
         },
         {
-          href: '/student/courses', // Conectado
+          href: '/student/courses',
           icon: (
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -63,7 +72,7 @@ export function DashboardPage() {
           label: 'Mis Cursos',
         },
         {
-          href: '/student/diplomas', // Conectado
+          href: '/student/diplomas',
           icon: (
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -72,7 +81,7 @@ export function DashboardPage() {
           label: 'Mis Diplomas',
         },
         {
-          href: '/student/progress', // Conectado
+          href: '/student/progress',
           icon: (
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -81,7 +90,7 @@ export function DashboardPage() {
           label: 'Mi Progreso',
         },
         {
-          href: '/student/notifications', // Conectado
+          href: '/student/notifications',
           icon: (
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -98,7 +107,7 @@ export function DashboardPage() {
       title: 'Configuración',
       items: [
         {
-          href: '/student/profile', // Conectado
+          href: '/student/profile',
           icon: (
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -127,7 +136,6 @@ export function DashboardPage() {
       sessionTime="1h 23min"
       notificationCount={2}
     >
-      {/* Resto del componente igual... */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
         <div className="xl:col-span-8 space-y-8">
           {loadingInscripciones ? (
@@ -150,14 +158,14 @@ export function DashboardPage() {
                 </h2>
                 <div className="flex items-center space-x-6 mb-6">
                   <div className="flex-1 max-w-xs h-2.5 bg-white/20 rounded-full">
-                    <div 
+                    <div
                       className="h-full bg-jc-calipso rounded-full shadow-[0_0_10px_rgba(82,169,183,0.5)]"
                       style={{ width: `${cursoEnProgreso.porcentaje_avance}%` }}
                     />
                   </div>
                   <span className="text-white font-bold text-sm">{cursoEnProgreso.porcentaje_avance}% completado</span>
                 </div>
-                <button 
+                <button
                   onClick={() => handleCourseClick(cursoEnProgreso.curso)}
                   className="px-8 py-3 bg-jc-calipso text-white rounded-lg font-semibold hover:bg-white hover:text-slate-900 transition-all transform hover:shadow-lg"
                 >
@@ -170,7 +178,7 @@ export function DashboardPage() {
               <div className="relative z-10 p-8 md:p-12 text-center w-full">
                 <h2 className="text-2xl font-bold text-white mb-4">No tienes cursos en progreso</h2>
                 <p className="text-white/70 mb-6">Explora el catálogo y comienza tu primera capacitación</p>
-                <button 
+                <button
                   onClick={() => navigate('/student/courses')}
                   className="px-8 py-3 bg-jc-calipso text-white rounded-lg font-semibold hover:bg-white hover:text-slate-900 transition-all"
                 >
@@ -203,24 +211,24 @@ export function DashboardPage() {
             ) : inscripcionesActivas.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {inscripcionesActivas.map((inscripcion) => {
-                const estadoTemporal = inscripcion.curso_data?.estado_temporal;
-                const bloqueado = estadoTemporal === 'programado' || estadoTemporal === 'cerrado';
-                return (
-                  <div
-                    key={inscripcion.id}
-                    style={bloqueado ? { opacity: 0.4, pointerEvents: 'none' } : {}}
-                  >
-                    <CourseCard
-                      title={inscripcion.curso_data?.nombre || 'Sin título'}
-                      image={inscripcion.curso_data?.imagen_portada || ''}
-                      senceId={inscripcion.curso_data?.codigo_sence_data?.codigo}
-                      duration={`${inscripcion.curso_data?.horas_totales || 0} Horas lectivas`}
-                      progress={inscripcion.porcentaje_avance || 0}
-                      onClick={() => { if (!bloqueado) handleCourseClick(inscripcion.curso); }}
-                    />
-                  </div>
-                );
-              })}
+                  const estadoTemporal = inscripcion.curso_data?.estado_temporal;
+                  const bloqueado = estadoTemporal === 'programado' || estadoTemporal === 'cerrado';
+                  return (
+                    <div
+                      key={inscripcion.id}
+                      style={bloqueado ? { opacity: 0.4, pointerEvents: 'none' } : {}}
+                    >
+                      <CourseCard
+                        title={inscripcion.curso_data?.nombre || 'Sin título'}
+                        image={inscripcion.curso_data?.imagen_portada || ''}
+                        senceId={inscripcion.curso_data?.codigo_sence_data?.codigo}
+                        duration={`${inscripcion.curso_data?.horas_totales || 0} Horas lectivas`}
+                        progress={inscripcion.porcentaje_avance || 0}
+                        onClick={() => { if (!bloqueado) handleCourseClick(inscripcion.curso); }}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <Alert variant="info" title="No tienes cursos activos">
@@ -292,13 +300,14 @@ export function DashboardPage() {
           </div>
         </aside>
 
+        {/* ══ FOOTER: Explora Más Cursos (datos reales) ══ */}
         <footer className="xl:col-span-12 pt-8 border-t border-slate-200">
           <div className="flex justify-between items-end mb-8">
             <div>
               <h3 className="text-2xl font-bold text-slate-800">Explora Más Cursos</h3>
               <p className="text-slate-500 mt-1">Potencia tu carrera profesional con estas nuevas capacitaciones</p>
             </div>
-            <button 
+            <button
               onClick={() => navigate('/student/courses')}
               className="group flex items-center text-jc-blue font-bold hover:text-jc-calipso transition-colors"
             >
@@ -308,43 +317,33 @@ export function DashboardPage() {
               </svg>
             </button>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <AvailableCourseCard
-              title="Gestión de Residuos y Economía Circular en Acuicultura"
-              image="https://images.unsplash.com/photo-1621451537084-482c73073a0f?w=500"
-              senceId="2847561"
-              duration="16 Horas lectivas"
-              category="Medio Ambiente"
-              isNew={true}
-              onClick={() => navigate('/student/courses')}
-            />
-            <AvailableCourseCard
-              title="Tecnologías de Monitoreo en Cultivos Marinos"
-              image="https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=500"
-              senceId="3958472"
-              duration="20 Horas lectivas"
-              category="Tecnología"
-              onClick={() => navigate('/student/courses')}
-            />
-            <AvailableCourseCard
-              title="Nutrición Avanzada en Salmónidos"
-              image="https://images.unsplash.com/photo-1544943910-4c1dc44aab44?w=500"
-              senceId="4729183"
-              duration="24 Horas lectivas"
-              category="Nutrición"
-              onClick={() => navigate('/student/courses')}
-            />
-            <AvailableCourseCard
-              title="Certificación ISO 14001 para Centros de Cultivo"
-              image="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=500"
-              senceId="5618294"
-              duration="32 Horas lectivas"
-              category="Certificaciones"
-              isNew={true}
-              onClick={() => navigate('/student/courses')}
-            />
-          </div>
+
+          {loadingCatalogo ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-64 bg-slate-200 animate-pulse rounded-xl" />
+              ))}
+            </div>
+          ) : catalogo.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-2xl border-2 border-dashed border-slate-200">
+              <p className="text-slate-500 text-sm font-medium">No hay cursos disponibles en este momento.</p>
+              <p className="text-slate-400 text-xs mt-1">El administrador publicará nuevos cursos próximamente.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {catalogo.slice(0, 4).map(curso => (
+                <AvailableCourseCard
+                  key={curso.id}
+                  title={curso.nombre}
+                  image={curso.imagen_portada || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500'}
+                  senceId={curso.codigo_sence_data?.codigo}
+                  duration={`${curso.horas_totales} Horas lectivas`}
+                  category={curso.estado_temporal}
+                  onClick={() => navigate('/student/courses')}
+                />
+              ))}
+            </div>
+          )}
         </footer>
       </div>
     </MainLayout>
