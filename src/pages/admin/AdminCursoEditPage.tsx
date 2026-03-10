@@ -29,18 +29,22 @@ export function AdminCursoEditPage() {
   }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-    try {
-      await cursoService.patch(id!, formData);
-      navigate(`/admin/cursos/${id}`);
-    } catch (err) {
-      setError("No se pudieron guardar los cambios. Verifique los datos.");
-    } finally {
-      setSaving(false);
-    }
-  };
+  e.preventDefault();
+  setSaving(true);
+  setError(null);
+  try {
+    const dataToSend = {
+      ...formData,
+      publicado: formData.estado === 'activo', // ← garantiza sincronía al guardar
+    };
+    await cursoService.patch(id!, dataToSend);
+    navigate(`/admin/cursos/${id}`);
+  } catch (err) {
+    setError("No se pudieron guardar los cambios. Verifique los datos.");
+  } finally {
+    setSaving(false);
+  }
+};
 
   if (loading) return <div className="p-20 text-center">Cargando formulario...</div>;
 
@@ -92,7 +96,14 @@ export function AdminCursoEditPage() {
     <select 
       className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jc-calipso/20 focus:border-jc-calipso outline-none transition"
       value={formData.estado || 'borrador'}
-      onChange={e => setFormData({...formData, estado: e.target.value as any})}
+      onChange={e => {
+        const nuevoEstado = e.target.value as any;
+        setFormData({
+          ...formData,
+          estado: nuevoEstado,
+          publicado: nuevoEstado === 'activo',  // ← sincroniza publicado automáticamente
+        });
+      }}
     >
       <option value="activo">Activo (Visible)</option>
       <option value="borrador">Borrador (Edición)</option>

@@ -183,33 +183,49 @@ export function ExamenPage() {
 
   // ── Iniciar examen ─────────────────────────────────────────────────────────
   const iniciarExamen = async () => {
-    if (!evaluacion) return;
-    try {
-      setFase('cargando');
+  if (!evaluacion) return;
+  try {
+    setFase('cargando');
 
-      // Crear el intento en el backend
+    // Verificar si ya hay uno en progreso (evita duplicados por StrictMode)
+    const intentosExistentes = await api.get('/intentos-evaluacion/', {
+      params: { evaluacion: evaluacion.id }
+    });
+    const lista = intentosExistentes.data?.results || intentosExistentes.data || [];
+    const yaEnProgreso = lista.find((i: any) => i.estado === 'en_progreso');
+
+    let intentoData;
+    if (yaEnProgreso) {
+      intentoData = yaEnProgreso;
+    } else {
+      const inscripcionId = await obtenerInscripcionId();
       const res = await api.post('/intentos-evaluacion/', {
         evaluacion: evaluacion.id,
-        inscripcion: await obtenerInscripcionId(),
+        inscripcion: inscripcionId,
         numero_intento: intentosUsados + 1,
         fecha_inicio: new Date().toISOString(),
         estado: 'en_progreso',
       });
-
-      setIntentoActivo({ id: res.data.id, numero_intento: res.data.numero_intento, fecha_inicio: res.data.fecha_inicio });
-      setSegundosRestantes(evaluacion.tiempo_limite_minutos * 60);
-      setRespuestas({});
-      setPreguntaActual(0);
-      entregaAutomaticaRef.current = false;
-      cambiosPestanaRef.current = 0;
-      setFase('en_curso');
-      iniciarCronometro();
-    } catch (err: any) {
-      console.error('Error al iniciar examen:', err);
-      setErrorMsg(err?.response?.data?.detail || 'No se pudo iniciar el examen.');
-      setFase('error');
+      intentoData = res.data;
     }
-  };
+
+    setIntentoActivo({
+      id: intentoData.id,
+      numero_intento: intentoData.numero_intento,
+      fecha_inicio: intentoData.fecha_inicio,
+    });
+    setSegundosRestantes(evaluacion.tiempo_limite_minutos * 60);
+    setRespuestas({});
+    setPreguntaActual(0);
+    entregaAutomaticaRef.current = false;
+    cambiosPestanaRef.current = 0;
+    setFase('en_curso');
+    iniciarCronometro();
+  } catch (err: any) {
+    setErrorMsg(err?.response?.data?.detail || 'No se pudo iniciar el examen.');
+    setFase('error');
+  }
+};
 
   // Helper: obtener inscripción del estudiante en este curso
   const obtenerInscripcionId = async (): Promise<number> => {

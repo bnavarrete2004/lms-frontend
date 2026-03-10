@@ -6,7 +6,7 @@ import BaseService from './baseService';
 export interface CodigoSence {
   id: number;
   codigo: string;
-  nombre_curso: string;  // ← Corregido
+  nombre_curso: string;
   horas_totales: number;
   horas_disponibles?: number;
   fecha_inicio_vigencia?: string;
@@ -29,8 +29,8 @@ export interface Modulo {
 export interface RelatorCurso {
   id: number;
   relator: number;
-  relator_nombre?: string;       // SerializerMethodField del backend
-  nombre_completo?: string;      // por si viene con otro nombre
+  relator_nombre?: string;
+  nombre_completo?: string;
   fecha_asignacion?: string;
   es_principal?: boolean;
 }
@@ -41,15 +41,15 @@ export interface Curso {
   codigo_sence_data?: CodigoSence;
   nombre: string;
   descripcion: string;
-  horas_totales: number;  // ← Campo correcto del backend
+  horas_totales: number;
   modalidad: 'presencial' | 'online' | 'mixto';
   nivel: 'basico' | 'intermedio' | 'avanzado';
   estado: 'activo' | 'inactivo' | 'borrador';
-  imagen_portada?: string;  // ← Corregido de imagen_url
+  imagen_portada?: string;
   imagen_banner?: string;
-  fecha_inicio?: string;         // ← agregado
-  fecha_fin?: string;            // ← agregado
-  relatores?: RelatorCurso[];    // ← agregado (Many-to-Many via CursoRelator)
+  fecha_inicio?: string;
+  fecha_fin?: string;
+  relatores?: RelatorCurso[];
   total_inscritos?: number;
   cupos_disponibles?: number;
   modulos?: Modulo[];
@@ -58,6 +58,19 @@ export interface Curso {
   estado_temporal?: 'borrador' | 'programado' | 'en_curso' | 'cerrado';
   sincronizado_con_sence?: boolean;
   dias_gracia?: number;
+  publicado?: boolean;
+  objetivos?: string;
+  requisitos?: string;
+  cupo_maximo?: number;
+  cupo_minimo?: number;
+}
+
+// Respuesta del action inscribirse
+export interface InscribirseResponse {
+  mensaje: string;
+  inscripcion_id: number;
+  curso_id: number;
+  estado: string;
 }
 
 class CursoService extends BaseService<Curso> {
@@ -68,10 +81,28 @@ class CursoService extends BaseService<Curso> {
   async getActivos() {
     return this.filter({ estado: 'activo' });
   }
-  async asignarEstudiantes(cursoId: number, payload: { usuario_id?: number; codigo_empleado?: string }) {
-  return this.customAction(cursoId, 'asignar_estudiantes', payload);
-}
-}
 
+  async asignarEstudiantes(
+    cursoId: number,
+    payload: { usuario_id?: number; codigo_empleado?: string }
+  ) {
+    return this.customAction(cursoId, 'asignar_estudiantes', payload);
+  }
+
+  /**
+   * Catálogo: cursos publicados y activos en los que el estudiante NO está inscrito.
+   * El backend filtra automáticamente por el usuario logueado.
+   */
+  async getCatalogo(): Promise<Curso[]> {
+    return this.filter({ catalogo: 'true' });
+  }
+
+  /**
+   * Auto-inscripción del estudiante en un curso del catálogo.
+   */
+  async inscribirse(cursoId: number): Promise<InscribirseResponse> {
+    return this.customAction<InscribirseResponse>(cursoId, 'inscribirse');
+  }
+}
 
 export const cursoService = new CursoService();
