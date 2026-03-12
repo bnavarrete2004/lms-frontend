@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, FileSearch, BookOpen, Users, User, BarChart3,
-  FolderTree, FileText, Globe, Settings, Plus, Eye, Pencil,
+  FolderTree, FileText, Globe, Plus, Eye, Pencil,
   X, Trash2, Save, UserPlus, Search,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -243,6 +243,7 @@ export function AdminCursosPage() {
       userName={user?.nombre_completo || 'Admin'}
       sidebarSections={sidebarSections}
       onLogout={() => { logout(); navigate('/login'); }}
+      onNotificationClick={() => navigate('/admin/notificaciones')}
       headerTitle="Gestión de Cursos"
       headerSubtitle="Administración de programas e inscripciones"
     >

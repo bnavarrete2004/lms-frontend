@@ -504,6 +504,7 @@ export function AdminRevisionPage() {
       userName={user?.nombre_completo || 'Admin'}
       sidebarSections={sidebarSections}
       onLogout={() => { logout(); navigate('/login'); }}
+      onNotificationClick={() => navigate('/admin/notificaciones')}
       headerTitle="Revisión de Material"
       headerSubtitle="Validación de contenido enviado por relatores"
     >

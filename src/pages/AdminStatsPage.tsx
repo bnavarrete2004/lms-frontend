@@ -16,9 +16,7 @@ import {
   CheckCircle2,
   Star,
   FolderTree,
-  Globe,
-  Settings
-} from 'lucide-react';
+  Globe} from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { StatCard } from '@/components/relator/StatCard';
@@ -193,6 +191,7 @@ export function AdminStatsPage() {
       userName={user?.nombre_completo || 'Admin'}
       sidebarSections={sidebarSections}
       onLogout={() => { logout(); navigate('/login'); }}
+      onNotificationClick={() => navigate('/admin/notificaciones')}
       headerTitle="Estadísticas de la Plataforma"
       headerSubtitle={`${totalEstudiantes} estudiantes registrados (${cursando} cursando actualmente)`}
     >

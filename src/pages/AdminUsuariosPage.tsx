@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileSearch, BookOpen, Users, User, BarChart3,
-  FolderTree, FileText, Globe, Settings, Eye, Pencil, X, Save,
+  FolderTree, FileText, Globe, Eye, Pencil, X, Save,
   UserCheck, UserX, ShieldCheck, GraduationCap, Mic2, UserPlus,
   Building2, ChevronDown, Trash2, Search,
 } from 'lucide-react';
@@ -869,6 +869,7 @@ export function AdminUsuariosPage() {
       userSubtitle={user?.rol}
       sidebarSections={sidebarSections}
       onLogout={handleLogout}
+      onNotificationClick={() => navigate('/admin/notificaciones')}
       headerTitle="Usuarios y Roles"
       headerSubtitle="Administrar estudiantes y relatores del sistema"
       notificationCount={0}

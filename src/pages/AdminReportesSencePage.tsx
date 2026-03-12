@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileSearch, BookOpen, Users, User, BarChart3,
-  FolderTree, FileText, Globe, Settings, Filter, X,
+  FolderTree, FileText, Globe, Filter, X,
   Download, CheckCircle, XCircle, Clock, TrendingUp,
   ChevronLeft, ChevronRight, Search, RefreshCw,
 } from 'lucide-react';
@@ -225,6 +225,7 @@ export function AdminReportesSencePage() {
       userSubtitle={user?.rol || 'Administrador'}
       sidebarSections={sidebarSections}
       onLogout={() => { logout(); navigate('/login'); }}
+      onNotificationClick={() => navigate('/admin/notificaciones')}
       headerTitle="Reportes SENCE"
       headerSubtitle="Genera reportes de rendimiento y certificación"
       headerActions={

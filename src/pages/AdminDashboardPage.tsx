@@ -10,7 +10,6 @@ import {
   FolderTree,
   FileText,
   Globe,
-  Settings,
   AlertTriangle,
   CheckCircle2,
   Clock,
@@ -278,6 +277,7 @@ export function AdminDashboardPage() {
       userSubtitle={user?.rol}
       sidebarSections={sidebarSections}
       onLogout={handleLogout}
+      onNotificationClick={() => navigate('/admin/notificaciones')}
       headerTitle="Centro de Administración"
       notificationCount={stats.materialesPendientes}
     >

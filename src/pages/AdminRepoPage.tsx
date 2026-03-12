@@ -5,7 +5,7 @@ import {
   LayoutDashboard, FileSearch, BookOpen, Users, User, BarChart3,
   FolderTree, FileText, Search, X, Download, Eye, Pencil, 
   Trash2, Video, FileArchive, Save, Globe, 
-  Settings, Upload, CloudUpload, CheckCircle
+  Upload, CloudUpload, CheckCircle
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -177,6 +177,7 @@ export function AdminRepoPage() {
       userName={user?.nombre_completo || 'Admin'}
       sidebarSections={sidebarSections}
       onLogout={() => { logout(); navigate('/login'); }}
+      onNotificationClick={() => navigate('/admin/notificaciones')}
       headerTitle="Repositorio de Archivos"
       headerSubtitle="Gestión centralizada del material académico oficial"
     >

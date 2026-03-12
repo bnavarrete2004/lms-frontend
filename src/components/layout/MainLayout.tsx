@@ -21,14 +21,13 @@ interface MainLayoutProps {
     }>;
   }>;
   onLogout?: () => void;
-
   // Props del Header
   headerTitle: string;
   headerSubtitle?: string;
   sessionTime?: string;
   notificationCount?: number;
+  onNotificationClick?: () => void;
   headerActions?: ReactNode;
-
   // Contenido principal
   children: ReactNode;
 }
@@ -44,6 +43,7 @@ export function MainLayout({
   headerSubtitle,
   sessionTime,
   notificationCount,
+  onNotificationClick,
   headerActions,
   children,
 }: MainLayoutProps) {
@@ -58,7 +58,6 @@ export function MainLayout({
         sections={sidebarSections}
         onLogout={onLogout}
       />
-
       {/* Contenido Principal */}
       <main className="flex-1 overflow-y-auto">
         {/* Header */}
@@ -70,9 +69,9 @@ export function MainLayout({
           userAvatar={userAvatar}
           sessionTime={sessionTime}
           notificationCount={notificationCount}
+          onNotificationClick={onNotificationClick}
           actions={headerActions}
         />
-
         {/* Contenido */}
         <div className="px-10 py-8">
           {children}

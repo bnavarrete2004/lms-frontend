@@ -143,6 +143,7 @@ export function AdminConfigPage() {
       userSubtitle={user?.rol || 'Administrador'}
       sidebarSections={sidebarSections}
       onLogout={handleLogout}
+      onNotificationClick={() => navigate('/admin/notificaciones')}
       headerTitle="Mi Perfil"
       headerSubtitle="Gestiona tu información personal y ajustes de cuenta"
       headerActions={

@@ -42,6 +42,7 @@ import { AdminRevisionPage } from '@/pages/AdminRevisionPage';
 import { AdminLandingPage } from '@/pages/AdminLandingPage';
 import { AdminConfigPage } from '@/pages/AdminConfigPage';
 import { AdminReportesSencePage } from '@/pages/AdminReportesSencePage';
+import { AdminNotificationsPage } from '@/pages/AdminNotificationsPage';
 
 // --- PÁGINAS DE TEST/DESARROLLO ---
 import { TestApiPage } from './pages/TestApiPage';
@@ -166,6 +167,7 @@ function App() {
           <Route path="/admin/landing" element={<ProtectedRoute allowedRoles={['administrador']}><AdminLandingPage /></ProtectedRoute>} />
           <Route path="/admin/config" element={<ProtectedRoute allowedRoles={['administrador']}><AdminConfigPage /></ProtectedRoute>} />
           <Route path="/admin/reportes" element={<ProtectedRoute allowedRoles={['administrador']}><AdminReportesSencePage /></ProtectedRoute>} />
+          <Route path="/admin/notificaciones" element={<ProtectedRoute allowedRoles={['administrador']}><AdminNotificationsPage /></ProtectedRoute>} />
 
           {/* ==========================================
               DESARROLLO
