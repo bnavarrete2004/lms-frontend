@@ -404,7 +404,6 @@ export function ExamenPage() {
 
   // ── Instrucciones ──
   if (fase === 'instrucciones' && evaluacion) {
-    const intentosRestantes = evaluacion.intentos_permitidos - intentosUsados;
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 w-full max-w-2xl">
@@ -439,8 +438,8 @@ export function ExamenPage() {
             />
             <InfoCard
               icono={<svg className="w-5 h-5 text-[#064D91]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>}
-              label="Intentos restantes"
-              valor={`${intentosRestantes} de ${evaluacion.intentos_permitidos}`}
+              label="Intento"
+              valor={`${intentosUsados + 1} de ${evaluacion.intentos_permitidos}`}
             />
           </div>
 
@@ -466,7 +465,7 @@ export function ExamenPage() {
                   <li>• El cronómetro no se detiene una vez iniciado.</li>
                   <li>• Cambiar de pestaña o ventana más de {MAX_CAMBIOS_PESTANA} veces cerrará el examen automáticamente.</li>
                   <li>• Si el tiempo se acaba, el examen se entrega con las respuestas registradas hasta ese momento.</li>
-                  <li>• Tienes <strong>{intentosRestantes}</strong> {intentosRestantes === 1 ? 'intento' : 'intentos'} disponibles.</li>
+                  <li>• Este es tu intento <strong>{intentosUsados + 1}</strong> de <strong>{evaluacion.intentos_permitidos}</strong> permitidos.</li>
                 </ul>
               </div>
             </div>
