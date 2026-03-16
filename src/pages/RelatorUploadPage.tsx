@@ -464,7 +464,7 @@ const prevStep = () => setPaso(prev => {
                     </label>
                     <div className="grid grid-cols-2 gap-4">
                       {[
-                        { val: 'intermedio', label: 'Examen Intermedio', desc: 'Asociado a un módulo específico', icon: '📋' },
+                        { val: 'intermedio', label: 'Evaluación Intermedia', desc: 'Asociado a un módulo específico', icon: '📋' },
                         { val: 'final',      label: 'Examen Final',      desc: 'Evaluación final del curso completo', icon: '🎓' },
                       ].map(opt => (
                         <button
