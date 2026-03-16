@@ -820,7 +820,7 @@ export function CourseDetailPage() {
                 </div>
               </div>
 
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 self-center">
                 {!cierre.examenRendido ? (
                   <Button onClick={handleIrAExamen}>Rendir Examen</Button>
                 ) : (

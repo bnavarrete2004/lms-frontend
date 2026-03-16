@@ -32,12 +32,21 @@ interface Evaluacion {
   intentos_permitidos: number;
   preguntas: Pregunta[];
   porcentaje_aprobacion: number;
+  nota_aprobacion: number;
+  modulo?: number | null;
 }
 
 interface IntentoActivo {
   id: number;
   numero_intento: number;
   fecha_inicio: string;
+}
+
+interface ResultadoFinal {
+  nota_obtenida: number | null;
+  aprobado: boolean;
+  intentos_usados: number;
+  intentos_permitidos: number;
 }
 
 // Respuesta local mientras el estudiante completa el examen
@@ -69,6 +78,7 @@ export function ExamenPage() {
   const [respuestas, setRespuestas] = useState<RespuestasLocales>({});
   const [preguntaActual, setPreguntaActual] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
+  const [resultadoFinal, setResultadoFinal] = useState<ResultadoFinal | null>(null);
 
   // Cronómetro
   const [segundosRestantes, setSegundosRestantes] = useState(0);
@@ -95,25 +105,19 @@ export function ExamenPage() {
       const eval_data: Evaluacion = evalRes.data;
       const intentos: any[] = intentosRes.data?.results || intentosRes.data || [];
 
-      // Contar solo intentos que realmente "consumen" un intento:
-      // completado y tiempo_excedido sí cuentan. 'abandonado' NO cuenta
-      // (el backend lo crea al iniciar y puede abandonarlo sin que el estudiante rinda nada).
       const completados = intentos.filter(
         i => i.estado === 'completado' || i.estado === 'tiempo_excedido'
       );
       setIntentosUsados(completados.length);
 
-      // Verificar si agotó intentos
       if (completados.length >= eval_data.intentos_permitidos) {
         setEvaluacion(eval_data);
         setFase('sin_intentos');
         return;
       }
 
-      // Verificar si hay intento en progreso (sesión interrumpida)
       const enProgreso = intentos.find(i => i.estado === 'en_progreso');
       if (enProgreso) {
-        // Retomar el intento existente
         setIntentoActivo({ id: enProgreso.id, numero_intento: enProgreso.numero_intento, fecha_inicio: enProgreso.fecha_inicio });
         const tiempoUsado = Math.floor((Date.now() - new Date(enProgreso.fecha_inicio).getTime()) / 1000);
         const tiempoTotal = eval_data.tiempo_limite_minutos * 60;
@@ -124,7 +128,6 @@ export function ExamenPage() {
       setEvaluacion(eval_data);
       setFase(enProgreso ? 'en_curso' : 'instrucciones');
 
-      // Si retomó, arrancar cronómetro inmediatamente
       if (enProgreso) iniciarCronometro();
 
     } catch (err: any) {
@@ -141,11 +144,9 @@ export function ExamenPage() {
     intervaloRef.current = setInterval(() => {
       setSegundosRestantes(prev => {
         if (prev <= 1) {
-          // Tiempo agotado → entregar automáticamente
           clearInterval(intervaloRef.current!);
           if (!entregaAutomaticaRef.current) {
             entregaAutomaticaRef.current = true;
-            // Usamos setTimeout para salir del setState antes de llamar a entregarExamen
             setTimeout(() => entregarExamen(true), 100);
           }
           return 0;
@@ -161,14 +162,13 @@ export function ExamenPage() {
     };
   }, []);
 
-  // ── Anti-cheat: detectar cambio de pestaña ─────────────────────────────────
+  // ── Anti-cheat ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (fase !== 'en_curso') return;
 
     const handleBlur = () => {
       cambiosPestanaRef.current += 1;
       if (cambiosPestanaRef.current >= MAX_CAMBIOS_PESTANA) {
-        // Cerrar el examen por trampa
         if (!entregaAutomaticaRef.current) {
           entregaAutomaticaRef.current = true;
           clearInterval(intervaloRef.current!);
@@ -183,51 +183,49 @@ export function ExamenPage() {
 
   // ── Iniciar examen ─────────────────────────────────────────────────────────
   const iniciarExamen = async () => {
-  if (!evaluacion) return;
-  try {
-    setFase('cargando');
+    if (!evaluacion) return;
+    try {
+      setFase('cargando');
 
-    // Verificar si ya hay uno en progreso (evita duplicados por StrictMode)
-    const intentosExistentes = await api.get('/intentos-evaluacion/', {
-      params: { evaluacion: evaluacion.id }
-    });
-    const lista = intentosExistentes.data?.results || intentosExistentes.data || [];
-    const yaEnProgreso = lista.find((i: any) => i.estado === 'en_progreso');
-
-    let intentoData;
-    if (yaEnProgreso) {
-      intentoData = yaEnProgreso;
-    } else {
-      const inscripcionId = await obtenerInscripcionId();
-      const res = await api.post('/intentos-evaluacion/', {
-        evaluacion: evaluacion.id,
-        inscripcion: inscripcionId,
-        numero_intento: intentosUsados + 1,
-        fecha_inicio: new Date().toISOString(),
-        estado: 'en_progreso',
+      const intentosExistentes = await api.get('/intentos-evaluacion/', {
+        params: { evaluacion: evaluacion.id }
       });
-      intentoData = res.data;
+      const lista = intentosExistentes.data?.results || intentosExistentes.data || [];
+      const yaEnProgreso = lista.find((i: any) => i.estado === 'en_progreso');
+
+      let intentoData;
+      if (yaEnProgreso) {
+        intentoData = yaEnProgreso;
+      } else {
+        const inscripcionId = await obtenerInscripcionId();
+        const res = await api.post('/intentos-evaluacion/', {
+          evaluacion: evaluacion.id,
+          inscripcion: inscripcionId,
+          numero_intento: intentosUsados + 1,
+          fecha_inicio: new Date().toISOString(),
+          estado: 'en_progreso',
+        });
+        intentoData = res.data;
+      }
+
+      setIntentoActivo({
+        id: intentoData.id,
+        numero_intento: intentoData.numero_intento,
+        fecha_inicio: intentoData.fecha_inicio,
+      });
+      setSegundosRestantes(evaluacion.tiempo_limite_minutos * 60);
+      setRespuestas({});
+      setPreguntaActual(0);
+      entregaAutomaticaRef.current = false;
+      cambiosPestanaRef.current = 0;
+      setFase('en_curso');
+      iniciarCronometro();
+    } catch (err: any) {
+      setErrorMsg(err?.response?.data?.detail || 'No se pudo iniciar el examen.');
+      setFase('error');
     }
+  };
 
-    setIntentoActivo({
-      id: intentoData.id,
-      numero_intento: intentoData.numero_intento,
-      fecha_inicio: intentoData.fecha_inicio,
-    });
-    setSegundosRestantes(evaluacion.tiempo_limite_minutos * 60);
-    setRespuestas({});
-    setPreguntaActual(0);
-    entregaAutomaticaRef.current = false;
-    cambiosPestanaRef.current = 0;
-    setFase('en_curso');
-    iniciarCronometro();
-  } catch (err: any) {
-    setErrorMsg(err?.response?.data?.detail || 'No se pudo iniciar el examen.');
-    setFase('error');
-  }
-};
-
-  // Helper: obtener inscripción del estudiante en este curso
   const obtenerInscripcionId = async (): Promise<number> => {
     const res = await api.get('/inscripciones/', { params: { curso: cursoId } });
     const inscripciones = res.data?.results || res.data || [];
@@ -243,7 +241,6 @@ export function ExamenPage() {
     setFase('enviando');
 
     try {
-      // 1. Guardar respuestas una por una (el backend hace upsert, es seguro rellamar)
       const preguntasOrdenadas = [...evaluacion.preguntas].sort((a, b) => a.orden - b.orden);
 
       for (const pregunta of preguntasOrdenadas) {
@@ -261,14 +258,9 @@ export function ExamenPage() {
           payload.respuesta_texto = String(respuesta);
         }
 
-        await api.post('/respuestas-estudiante/', payload).catch(() => {
-          // El endpoint hace upsert: si ya existe la respuesta (unique_together), actualiza.
-          // Ignoramos el 400 sólo en ese caso; otros errores se burbujean igual.
-        });
+        await api.post('/respuestas-estudiante/', payload).catch(() => {});
       }
 
-      // 2. Trampa o tiempo excedido: marcar el intento directamente sin calcular nota
-      //    (estos estados no cuentan como intento completado para efectos de nota final)
       if (motivo === 'trampa') {
         await api.patch(`/intentos-evaluacion/${intentoActivo.id}/`, {
           estado: 'abandonado',
@@ -279,20 +271,30 @@ export function ExamenPage() {
       }
 
       if (automatico) {
-        // Tiempo agotado: marcar como tiempo_excedido y luego finalizar para calificar
         await api.patch(`/intentos-evaluacion/${intentoActivo.id}/`, {
           estado: 'tiempo_excedido',
           fecha_fin: new Date().toISOString(),
         });
       }
 
-      // 3. Llamar a /finalizar/ que:
-      //    - Marca el intento como 'completado' (o lo deja si ya es tiempo_excedido)
-      //    - Calcula puntaje desde las respuestas guardadas en BD
-      //    - Calcula la nota oficial (escala chilena 1.0–7.0)
-      //    - Llama a actualizar_estado_inscripcion_automatico → cierra la inscripción
-      //      si ya se completaron todas las evaluaciones del curso
-      await api.post(`/intentos-evaluacion/${intentoActivo.id}/finalizar/`);
+      // ── CAMBIO 4: capturar resultado de /finalizar/ ──
+      const finRes = await api.post(`/intentos-evaluacion/${intentoActivo.id}/finalizar/`);
+
+      // Contar intentos completados actualizados
+      const intentosRes = await api.get('/intentos-evaluacion/', {
+        params: { evaluacion: evaluacion.id }
+      });
+      const todosIntentos = intentosRes.data?.results || intentosRes.data || [];
+      const completados = todosIntentos.filter(
+        (i: any) => i.estado === 'completado' || i.estado === 'tiempo_excedido'
+      ).length;
+
+      setResultadoFinal({
+        nota_obtenida: finRes.data.nota_obtenida,
+        aprobado: finRes.data.aprobado,
+        intentos_usados: completados,
+        intentos_permitidos: evaluacion.intentos_permitidos,
+      });
 
       setFase('entregado');
     } catch (err: any) {
@@ -310,9 +312,9 @@ export function ExamenPage() {
   };
 
   const colorCronometro = () => {
-    if (segundosRestantes > 300) return 'text-slate-800'; // > 5 min: normal
-    if (segundosRestantes > 60) return 'text-amber-600';  // 1-5 min: advertencia
-    return 'text-red-600 animate-pulse';                   // < 1 min: peligro
+    if (segundosRestantes > 300) return 'text-slate-800';
+    if (segundosRestantes > 60) return 'text-amber-600';
+    return 'text-red-600 animate-pulse';
   };
 
   const preguntasOrdenadas = evaluacion
@@ -323,7 +325,6 @@ export function ExamenPage() {
   const totalPreguntas = preguntasOrdenadas.length;
   const porcentajeAvance = totalPreguntas > 0 ? Math.round((respuestasContestadas / totalPreguntas) * 100) : 0;
 
-  // ── Normalizar opciones del backend (JSONField puede venir en distintos formatos)
   const normalizarOpciones = (pregunta: Pregunta): Opcion[] => {
     const raw = pregunta.opciones;
     if (Array.isArray(raw)) {
@@ -341,7 +342,6 @@ export function ExamenPage() {
 
   // ── RENDER ─────────────────────────────────────────────────────────────────
 
-  // ── Pantalla de carga ──
   if (fase === 'cargando') {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -353,7 +353,6 @@ export function ExamenPage() {
     );
   }
 
-  // ── Sin intentos ──
   if (fase === 'sin_intentos') {
     return (
       <PantallaFin
@@ -370,7 +369,6 @@ export function ExamenPage() {
     );
   }
 
-  // ── Error ──
   if (fase === 'error') {
     return (
       <PantallaFin
@@ -382,33 +380,104 @@ export function ExamenPage() {
     );
   }
 
-  // ── Examen entregado ──
-  if (fase === 'entregado' || fase === 'enviando') {
+  // ── CAMBIO 5: pantalla de resultados ──────────────────────────────────────
+
+  if (fase === 'enviando') {
     return (
       <PantallaFin
-        titulo={fase === 'enviando' ? 'Entregando examen...' : '¡Examen entregado!'}
-        subtitulo={
-          fase === 'enviando'
-            ? 'Por favor no cierres esta ventana.'
-            : 'Tu examen fue recibido y calificado correctamente. Vuelve al curso para continuar con los siguientes pasos.'
-        }
-        variante={fase === 'enviando' ? 'cargando' : 'exito'}
-        accion={
-          fase === 'entregado'
-            ? { label: 'Volver al curso', onClick: () => navigate(`/student/courses/${cursoId}`) }
-            : undefined
-        }
+        titulo="Entregando examen..."
+        subtitulo="Por favor no cierres esta ventana."
+        variante="cargando"
       />
     );
   }
 
-  // ── Instrucciones ──
+  if (fase === 'entregado' && resultadoFinal) {
+    const { nota_obtenida, aprobado, intentos_usados, intentos_permitidos } = resultadoFinal;
+    const sinIntentos = !aprobado && intentos_usados >= intentos_permitidos;
+    const puedeReintentar = !aprobado && intentos_usados < intentos_permitidos;
+    const esIntermedia = evaluacion?.modulo != null;
+
+    if (aprobado) {
+      return (
+        <PantallaFin
+          titulo="¡Aprobado! 🎉"
+          subtitulo={esIntermedia ? 'Continúa con el siguiente módulo.' : '¡Has completado el curso exitosamente!'}
+          variante="exito"
+          accion={{ label: esIntermedia ? 'Continuar al siguiente módulo' : 'Volver al curso', onClick: () => navigate(`/student/courses/${cursoId}`) }}
+          extra={
+            <div className="mt-8 mb-4 flex flex-col items-center gap-2">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tu nota</span>
+              <div className="w-full bg-green-100 text-green-800 font-bold text-6xl py-6 rounded-2xl shadow-sm text-center">
+                {nota_obtenida?.toFixed(1) ?? '—'}
+              </div>
+            </div>
+          }
+        />
+      );
+    }
+
+    if (puedeReintentar) {
+      return (
+        <PantallaFin
+          titulo="No aprobado"
+          subtitulo="Repasa el material antes de reintentar."
+          variante="advertencia"
+          accion={{ label: 'Reintentar examen', onClick: () => navigate(0) }}
+          extra={
+            <div className="mt-8 mb-4 flex flex-col items-center gap-2">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tu nota</span>
+              <div className="w-full bg-amber-100 text-amber-800 font-bold text-6xl py-6 rounded-2xl shadow-sm text-center">
+                {nota_obtenida?.toFixed(1) ?? '—'}
+              </div>
+            </div>
+          }
+        />
+      );
+    }
+
+    if (sinIntentos) {
+      return (
+        <PantallaFin
+          titulo="Sin intentos disponibles"
+          subtitulo="Has agotado todos tus intentos en esta evaluación."
+          variante="error"
+          accion={{ label: 'Volver al curso', onClick: () => navigate(`/student/courses/${cursoId}`) }}
+          extra={
+            <div className="mt-8 mb-4 flex flex-col items-center gap-4">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tu nota</span>
+              <div className="w-full bg-red-100 text-red-800 font-bold text-6xl py-6 rounded-2xl shadow-sm text-center">
+                {nota_obtenida?.toFixed(1) ?? '—'}
+              </div>
+              <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-5 py-4 text-sm text-slate-500 text-left flex gap-3 items-start">
+                <span className="text-lg mt-0.5">📬</span>
+                <p>El administrador ha sido notificado. En unos minutos podrías recibir un intento adicional en tus notificaciones.</p>
+              </div>
+            </div>
+          }
+        />
+      );
+    }
+  }
+
+  // Fallback entregado sin resultado (ej: trampa/abandonado)
+  if (fase === 'entregado') {
+    return (
+      <PantallaFin
+        titulo="Examen entregado"
+        subtitulo="Tu examen fue recibido."
+        variante="exito"
+        accion={{ label: 'Volver al curso', onClick: () => navigate(`/student/courses/${cursoId}`) }}
+      />
+    );
+  }
+
+  // ── Instrucciones ──────────────────────────────────────────────────────────
   if (fase === 'instrucciones' && evaluacion) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 w-full max-w-2xl">
 
-          {/* Header */}
           <div className="bg-gradient-to-r from-[#064D91] to-[#088395] rounded-t-2xl p-8 text-white">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
@@ -424,7 +493,6 @@ export function ExamenPage() {
             </div>
           </div>
 
-          {/* Info cards */}
           <div className="grid grid-cols-3 gap-4 p-6 border-b border-slate-100">
             <InfoCard
               icono={<svg className="w-5 h-5 text-[#064D91]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
@@ -443,7 +511,6 @@ export function ExamenPage() {
             />
           </div>
 
-          {/* Instrucciones */}
           {evaluacion.instrucciones && (
             <div className="p-6 border-b border-slate-100">
               <h3 className="font-bold text-slate-800 mb-3">Instrucciones</h3>
@@ -453,7 +520,6 @@ export function ExamenPage() {
             </div>
           )}
 
-          {/* Advertencias anti-cheat */}
           <div className="p-6 bg-amber-50 border-b border-amber-100">
             <div className="flex gap-3">
               <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -471,7 +537,6 @@ export function ExamenPage() {
             </div>
           </div>
 
-          {/* Acciones */}
           <div className="p-6 flex gap-4">
             <button
               onClick={() => navigate(`/student/courses/${cursoId}`)}
@@ -500,11 +565,8 @@ export function ExamenPage() {
     return (
       <div className="min-h-screen bg-slate-100 flex flex-col">
 
-        {/* ── Barra superior fija ── */}
         <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
           <div className="max-w-4xl mx-auto px-6 py-3 flex items-center justify-between gap-6">
-
-            {/* Info del examen */}
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-8 h-8 bg-[#064D91] rounded-lg flex items-center justify-center flex-shrink-0">
                 <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -517,7 +579,6 @@ export function ExamenPage() {
               </div>
             </div>
 
-            {/* Progreso */}
             <div className="flex-1 max-w-xs hidden sm:block">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs text-slate-500">{respuestasContestadas}/{totalPreguntas} respondidas</span>
@@ -531,7 +592,6 @@ export function ExamenPage() {
               </div>
             </div>
 
-            {/* Cronómetro */}
             <div className="flex items-center gap-2 flex-shrink-0">
               <svg className={`w-5 h-5 ${colorCronometro()}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -543,11 +603,9 @@ export function ExamenPage() {
           </div>
         </header>
 
-        {/* ── Contenido del examen ── */}
         <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-            {/* Panel izquierdo: navegador de preguntas */}
             <aside className="lg:col-span-3">
               <div className="bg-white rounded-xl border border-slate-200 p-4 sticky top-20">
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Preguntas</p>
@@ -589,12 +647,9 @@ export function ExamenPage() {
               </div>
             </aside>
 
-            {/* Panel derecho: pregunta actual */}
             <div className="lg:col-span-9">
               {pregunta && (
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-
-                  {/* Header de la pregunta */}
                   <div className="p-6 border-b border-slate-100">
                     <div className="flex items-center gap-3 mb-4">
                       <span className="w-8 h-8 rounded-lg bg-[#064D91] text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
@@ -618,7 +673,6 @@ export function ExamenPage() {
                     )}
                   </div>
 
-                  {/* Opciones de respuesta */}
                   <div className="p-6 space-y-3">
                     {(pregunta.tipo === 'seleccion_multiple' || pregunta.tipo === 'verdadero_falso') && (
                       <>
@@ -638,9 +692,7 @@ export function ExamenPage() {
                                 <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
                                   seleccionada ? 'border-[#064D91] bg-[#064D91]' : 'border-slate-300'
                                 }`}>
-                                  {seleccionada && (
-                                    <div className="w-2 h-2 rounded-full bg-white" />
-                                  )}
+                                  {seleccionada && <div className="w-2 h-2 rounded-full bg-white" />}
                                 </div>
                                 <span>{opcion.texto}</span>
                               </div>
@@ -661,7 +713,6 @@ export function ExamenPage() {
                     )}
                   </div>
 
-                  {/* Navegación entre preguntas */}
                   <div className="px-6 pb-6 flex items-center justify-between gap-4">
                     <button
                       onClick={() => setPreguntaActual(prev => Math.max(0, prev - 1))}
@@ -803,17 +854,17 @@ function PantallaFin({
 
   return (
     <div className={`min-h-screen ${c.bg} flex items-center justify-center p-6`}>
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 w-full max-w-md p-10 text-center">
+      <div className="bg-white rounded-3xl shadow-xl border border-slate-200 w-full max-w-md px-10 py-12 text-center">
         <div className={`w-20 h-20 rounded-full ${c.icon} flex items-center justify-center mx-auto mb-6`}>
           {iconos[variante]}
         </div>
-        <h2 className={`text-2xl font-bold mb-3 ${c.titulo}`}>{titulo}</h2>
-        <p className="text-slate-600 text-sm leading-relaxed">{subtitulo}</p>
+        <h2 className={`text-2xl font-bold mb-2 ${c.titulo}`}>{titulo}</h2>
+        <p className="text-slate-500 text-sm leading-relaxed">{subtitulo}</p>
         {extra}
         {accion && (
           <button
             onClick={accion.onClick}
-            className="mt-8 px-8 py-3 bg-[#064D91] text-white rounded-xl font-bold hover:bg-[#053d73] transition-colors"
+            className="mt-8 w-full py-3.5 bg-[#064D91] text-white rounded-xl font-bold hover:bg-[#053d73] transition-colors text-sm"
           >
             {accion.label}
           </button>
