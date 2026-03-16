@@ -125,8 +125,24 @@ export function StudentProfilePage() {
   };
 
   const handleSavePassword = async () => {
+    if (!passwords.old_password) {
+      alert('Debes ingresar tu contraseña actual.');
+      return;
+    }
+    if (passwords.new_password.length < 8) {
+      alert('La nueva contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
+    if (!/[A-Z]/.test(passwords.new_password)) {
+      alert('La nueva contraseña debe tener al menos una letra mayúscula.');
+      return;
+    }
+    if (!/[0-9]/.test(passwords.new_password)) {
+      alert('La nueva contraseña debe tener al menos un número.');
+      return;
+    }
     if (passwords.new_password !== passwords.confirm_password) {
-      alert('Las contraseñas no coinciden');
+      alert('Las nuevas contraseñas no coinciden.');
       return;
     }
     
@@ -139,8 +155,9 @@ export function StudentProfilePage() {
       });
       alert('✓ Contraseña actualizada correctamente');
       setPasswords({ old_password: '', new_password: '', confirm_password: '' });
-    } catch (error) {
-      alert('Error al cambiar la contraseña. Verifica tu contraseña actual.');
+    } catch (error: any) {
+      const msg = error?.response?.data?.error;
+      alert(typeof msg === 'string' ? msg : Array.isArray(msg) ? msg.join('\n') : 'error al cambiar la contraseña');
     } finally {
       setIsSaving(false);
     }

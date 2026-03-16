@@ -10,7 +10,12 @@ export interface Usuario {
   rut: string;
   rol: RolUsuario;
   avatar?: string;
+  avatar_url?: string;
+  biografia?: string;
   telefono?: string;
+  nombres?: string;
+  apellido_paterno?: string;
+  apellido_materno?: string;
   direccion?: string;
   fecha_nacimiento?: string;
   activo: boolean;
