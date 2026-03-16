@@ -253,8 +253,17 @@ export function RelatorUploadPage() {
     }
   }, [subcategoriaExamen, formData.tipo]);
 
-  const nextStep = () => setPaso(prev => Math.min(prev + 1, 4) as Paso);
-  const prevStep = () => setPaso(prev => Math.max(prev - 1, 1) as Paso);
+  const nextStep = () => setPaso(prev => {
+  const next = prev + 1;
+  if (next === 3 && formData.tipo === 'video') return 4;
+  return Math.min(next, 4) as Paso;
+});
+
+const prevStep = () => setPaso(prev => {
+  const prev2 = prev - 1;
+  if (prev2 === 3 && formData.tipo === 'video') return 2;
+  return Math.max(prev2, 1) as Paso;
+});
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) setFormData({ ...formData, file: e.target.files[0] });
@@ -729,7 +738,7 @@ export function RelatorUploadPage() {
                 (paso === 1 && !formData.tipo) ||
                 (paso === 2 && formData.tipo !== 'examen' && (!formData.nombre || (formData.tipo === 'video' && !formData.video_url))) ||
                 (paso === 2 && formData.tipo === 'examen' && !paso2ValidoExamen()) ||
-                (paso === 3 && !paso3Valido())
+                (paso === 3 && formData.tipo !== 'video' && !paso3Valido())
               }
             >
               Siguiente
