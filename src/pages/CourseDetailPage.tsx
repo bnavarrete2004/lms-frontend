@@ -201,20 +201,16 @@ export function CourseDetailPage() {
         );
 
         // Segunda pasada: asignar estado de desbloqueo usando la info completa de todos los módulos.
-        // El módulo N se desbloquea solo cuando el módulo N-1 tiene lecciones completas Y examen aprobado.
         const modulosConEstado: ModuloConEstado[] = modulosBase.map((modulo, idx) => {
           let estado: EstadoModulo;
 
           if (modulo._moduloListo) {
             estado = 'completado';
           } else if (modulo._leccionesCompletas && modulo.examenIntermedioId && !modulo.examenAprobado) {
-            // Lecciones hechas pero el examen está pendiente o fue reprobado → en_progreso
-            // (no bloqueado: el estudiante debe poder seguir accediendo al examen)
             estado = 'en_progreso';
           } else if (modulo.progreso > 0) {
             estado = 'en_progreso';
           } else {
-            // Sin progreso aún: primer módulo siempre disponible, el resto depende del anterior
             if (idx === 0) {
               estado = 'en_progreso';
             } else {
@@ -254,7 +250,6 @@ export function CourseDetailPage() {
       setSenceError('Hubo un problema al registrar tu sesión en SENCE. Intenta nuevamente.');
     }
 
-    // Verificar si hay sesión activa (para mostrar botón de cierre)
     senceService.getSesionActiva(inscripcion.id).then((res) => {
       if (res.tiene_sesion_activa && res.sesion) {
         setSesionSenceId(res.sesion.id);
@@ -265,28 +260,24 @@ export function CourseDetailPage() {
   // Carga el estado de las cards de cierre: examen final, encuesta, diploma
   const cargarEstadoCierre = useCallback(async (cursoId: number, insc: Inscripcion) => {
     try {
-      // Buscar evaluación de tipo 'final' del curso
       const evalRes = await api.get('/evaluaciones/', { params: { curso: cursoId, tipo: 'final' } });
       const evaluaciones = evalRes.data?.results || evalRes.data || [];
       const examenFinal  = evaluaciones[0] ?? null;
 
-      if (!examenFinal) return; // Sin examen final configurado → no mostrar sección de cierre
+      if (!examenFinal) return;
 
-      // Buscar intentos completados del estudiante en ese examen, filtrando por inscripción
       const intentosRes = await api.get('/intentos-evaluacion/', {
         params: { evaluacion: examenFinal.id, inscripcion: insc.id }
       });
       const intentos: any[] = intentosRes.data?.results || intentosRes.data || [];
       const examenRendido = intentos.some((i: any) => i.estado === 'completado');
 
-      // Encuesta
       const encuestaRes = await api.get('/respuestas-encuesta/', {
         params: { inscripcion: insc.id }
       }).catch(() => ({ data: [] }));
       const respuestasEncuesta = encuestaRes.data?.results || encuestaRes.data || [];
       const encuestaHecha = respuestasEncuesta.length > 0;
 
-      // Diploma — re-fetch inscripción para obtener diploma_url actualizado
       let diplomaUrl: string | null = null;
       try {
         const inscActualRes = await api.get(`/inscripciones/${insc.id}/`);
@@ -315,7 +306,6 @@ export function CourseDetailPage() {
 
   const handleEncuestaEnviada = async () => {
     if (inscripcion && id) {
-      // Breve pausa para que el backend termine de generar el diploma
       await new Promise(resolve => setTimeout(resolve, 1500));
       await cargarEstadoCierre(parseInt(id), inscripcion);
     }
@@ -347,7 +337,6 @@ export function CourseDetailPage() {
     }
   };
 
-  // Clases CSS según el estado del módulo
   const getModuleStateClasses = (estado: EstadoModulo) => {
     switch (estado) {
       case 'completado':
@@ -440,7 +429,6 @@ export function CourseDetailPage() {
     );
   }
 
-  // Calcular días restantes para banners
   const diasParaCierre = curso.fecha_fin
     ? Math.ceil((new Date(curso.fecha_fin).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
@@ -702,7 +690,6 @@ export function CourseDetailPage() {
                         </div>
 
                         {modulo.examenIntermedioId && modulo.estado === 'completado' && (
-                          // Módulo completado = lecciones + examen aprobado → botón de repaso
                           <button
                             onClick={() => navigate(`/student/courses/${id}/examen/${modulo.examenIntermedioId}`)}
                             className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl transition-colors"
@@ -715,7 +702,6 @@ export function CourseDetailPage() {
                         )}
 
                         {modulo.examenIntermedioId && modulo.estado === 'en_progreso' && modulo.progreso === 100 && !modulo.examenAprobado && (
-                          // Lecciones completas pero examen pendiente o reprobado → llamada a la acción
                           <button
                             onClick={() => navigate(`/student/courses/${id}/examen/${modulo.examenIntermedioId}`)}
                             className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold rounded-xl transition-colors"
@@ -769,7 +755,7 @@ export function CourseDetailPage() {
         )}
       </div>
 
-      {/* SECCIÓN DE CIERRE DE CURSO — visible cuando todos los módulos están al 100% y hay examen final */}
+      {/* SECCIÓN DE CIERRE DE CURSO */}
       {modulos.length > 0 && modulos.every(m => m.estado === 'completado') && cierre.examenFinalId && (
         <div className="mt-12 space-y-5 border-t-2 border-dashed border-slate-200 pt-10">
           <div className="mb-6">
@@ -805,7 +791,6 @@ export function CourseDetailPage() {
                   <p className="text-sm text-slate-500">Evaluación obligatoria para certificación SENCE</p>
                 </div>
               </div>
-
               <div className="flex items-center justify-between gap-4">
                 {!cierre.examenRendido ? (
                   <Button onClick={handleIrAExamen}>Rendir Examen</Button>
@@ -816,7 +801,7 @@ export function CourseDetailPage() {
             </div>
           </div>
 
-          {/* ── Card 2: Encuesta de Satisfacción — visible apenas el examen esté rendido ── */}
+          {/* ── Card 2: Encuesta de Satisfacción ── */}
           {cierre.examenRendido && (
             <div className={`bg-white rounded-xl border-2 transition-all shadow-sm ${
               !cierre.encuestaHecha ? 'border-[#52A9B7]' : 'border-slate-200'
@@ -843,7 +828,6 @@ export function CourseDetailPage() {
                     <p className="text-sm text-slate-500">Tu opinión es fundamental para nuestra mejora continua</p>
                   </div>
                 </div>
-
                 <div className="flex-shrink-0">
                   {!cierre.encuestaHecha ? (
                     <ModalEncuesta
@@ -861,7 +845,6 @@ export function CourseDetailPage() {
           {/* ── Card 3: Diploma o Mensaje de Espera ── */}
           {cierre.encuestaHecha && (
             <>
-              {/* CASO A: APROBADO -> Mostrar Diploma inmediatamente */}
               {inscripcion?.estado === 'aprobado' ? (
                 <div className="bg-gradient-to-r from-[#064D91] via-[#088395] to-[#06B6D4] rounded-xl p-8 text-white shadow-xl animate-in fade-in zoom-in duration-500">
                   <div className="flex items-center justify-between gap-6">
@@ -877,8 +860,6 @@ export function CourseDetailPage() {
                         Has aprobado el curso exitosamente. Tu diploma está disponible para descarga.
                       </p>
                     </div>
-
-                    {/* BOTÓN RESTABLECIDO Y MEJORADO: Lee directamente de la inscripción */}
                     {inscripcion?.diploma_url && (
                       <a
                         href={inscripcion.diploma_url}
@@ -895,7 +876,6 @@ export function CourseDetailPage() {
                   </div>
                 </div>
               ) : (inscripcion?.estado === 'reprobado') ? (
-                /* CASO B: REPROBADO -> Mostrar mensaje de error */
                 <div className="bg-red-50 border-2 border-red-200 rounded-xl p-8 shadow-sm flex items-start gap-4 animate-in slide-in-from-bottom-4 duration-500">
                   <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -903,9 +883,7 @@ export function CourseDetailPage() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-red-900 mb-1">
-                      Curso no aprobado
-                    </h3>
+                    <h3 className="text-lg font-bold text-red-900 mb-1">Curso no aprobado</h3>
                     <p className="text-red-800 text-sm leading-relaxed">
                       Lamentablemente no has alcanzado la nota mínima requerida para obtener la certificación de este curso. Si tienes dudas sobre tu calificación, contacta con tu administrador.
                     </p>
@@ -933,6 +911,52 @@ export function CourseDetailPage() {
   );
 }
 
+// ── Componente StarRating ─────────────────────────────────────────────────────
+
+function StarRating({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (val: number) => void;
+}) {
+  const [hover, setHover] = useState(0);
+
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => {
+        const filled = star <= (hover || value);
+        return (
+          <button
+            key={star}
+            type="button"
+            onClick={() => onChange(star)}
+            onMouseEnter={() => setHover(star)}
+            onMouseLeave={() => setHover(0)}
+            className="transition-transform hover:scale-110 focus:outline-none"
+            aria-label={`${star} estrella${star !== 1 ? 's' : ''}`}
+          >
+            <svg
+              className={`w-8 h-8 transition-colors ${
+                filled ? 'text-amber-400' : 'text-slate-200'
+              }`}
+              fill={filled ? 'currentColor' : 'currentColor'}
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+            </svg>
+          </button>
+        );
+      })}
+      {value > 0 && (
+        <span className="ml-2 text-xs font-semibold text-slate-400">
+          {['', 'Muy malo', 'Malo', 'Regular', 'Bueno', 'Excelente'][value]}
+        </span>
+      )}
+    </div>
+  );
+}
+
 // ── Componente ModalEncuesta ──────────────────────────────────────────────────
 
 interface ModalEncuestaProps {
@@ -941,9 +965,9 @@ interface ModalEncuestaProps {
 }
 
 function ModalEncuesta({ inscripcionId, onEnviada }: ModalEncuestaProps) {
-  const [abierto, setAbierto]     = useState(false);
+  const [abierto, setAbierto]       = useState(false);
   const [comentario, setComentario] = useState('');
-  const [enviando, setEnviando]   = useState(false);
+  const [enviando, setEnviando]     = useState(false);
 
   const preguntas = [
     '¿Cómo calificarías el contenido del curso?',
@@ -974,7 +998,6 @@ function ModalEncuesta({ inscripcionId, onEnviada }: ModalEncuestaProps) {
         respuestas:  respuestasJson,
       });
 
-      // Intentar generar diploma automáticamente
       try {
         await api.post('/diplomas/generar/', { inscripcion_id: inscripcionId });
       } catch (diplomaErr) {
@@ -1017,30 +1040,15 @@ function ModalEncuesta({ inscripcionId, onEnviada }: ModalEncuestaProps) {
               {preguntas.map((pregunta, idx) => (
                 <div key={idx}>
                   <p className="text-sm font-semibold text-slate-700 mb-3">{pregunta}</p>
-                  <div className="flex gap-2 items-center">
-                    {[1, 2, 3, 4, 5].map((val) => (
-                      <button
-                        key={val}
-                        onClick={() => {
-                          const nuevas = [...respuestas];
-                          nuevas[idx]  = val;
-                          setRespuestas(nuevas);
-                        }}
-                        className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${
-                          respuestas[idx] === val
-                            ? 'bg-[#064D91] text-white shadow-md scale-105'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        {val}
-                      </button>
-                    ))}
-                    {respuestas[idx] > 0 && (
-                      <span className="text-xs text-slate-400 ml-1">
-                        {['', 'Muy malo', 'Malo', 'Regular', 'Bueno', 'Excelente'][respuestas[idx]]}
-                      </span>
-                    )}
-                  </div>
+                  {/* ── CAMBIADO: estrellas en lugar de botones numéricos ── */}
+                  <StarRating
+                    value={respuestas[idx]}
+                    onChange={(val) => {
+                      const nuevas = [...respuestas];
+                      nuevas[idx]  = val;
+                      setRespuestas(nuevas);
+                    }}
+                  />
                 </div>
               ))}
 

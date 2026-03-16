@@ -15,14 +15,12 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Avatar } from '@/components/ui/Avatar';
 import api from '@/api/axios';
 
 export function StudentProfilePage() {
   const navigate = useNavigate();
   const { user, logout, updateUser } = useAuth();
   
-  // Estados para edición
   const [passwords, setPasswords] = useState({
     old_password: '',
     new_password: '',
@@ -31,7 +29,6 @@ export function StudentProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  // ── Sidebar Config (Copia fiel del Dashboard) ──
   const sidebarSections = [
     {
       title: 'Menú Principal',
@@ -100,7 +97,7 @@ export function StudentProfilePage() {
     },
   ];
 
-  // ── Handlers ──
+  // ── Foto de perfil ──────────────────────────────────────────────────────────
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -113,8 +110,11 @@ export function StudentProfilePage() {
       const res = await api.post('/upload/avatar/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      if (user) {
-        updateUser({ ...user, avatar: res.data.url });
+
+      // ── CORREGIDO: la respuesta real es res.data.usuario.avatar_url ────────
+      const avatarUrl = res.data.usuario?.avatar_url || res.data.url || res.data.avatar_url;
+      if (user && avatarUrl) {
+        updateUser({ ...user, avatar_url: avatarUrl, avatar: avatarUrl });
       }
       alert('✓ Foto de perfil actualizada');
     } catch (error) {
@@ -124,6 +124,7 @@ export function StudentProfilePage() {
     }
   };
 
+  // ── Cambiar contraseña ──────────────────────────────────────────────────────
   const handleSavePassword = async () => {
     if (!passwords.old_password) {
       alert('Debes ingresar tu contraseña actual.');
@@ -157,11 +158,15 @@ export function StudentProfilePage() {
       setPasswords({ old_password: '', new_password: '', confirm_password: '' });
     } catch (error: any) {
       const msg = error?.response?.data?.error;
-      alert(typeof msg === 'string' ? msg : Array.isArray(msg) ? msg.join('\n') : 'error al cambiar la contraseña');
+      alert(typeof msg === 'string' ? msg : Array.isArray(msg) ? msg.join('\n') : 'Error al cambiar la contraseña.');
     } finally {
       setIsSaving(false);
     }
   };
+
+  // ── Avatar source (mismo patrón que MainLayout) ────────────────────────────
+  const avatarSrc = user?.avatar_url || user?.avatar ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.nombre_completo || 'E')}&background=fff&color=064D91&size=128`;
 
   return (
     <MainLayout
@@ -176,25 +181,39 @@ export function StudentProfilePage() {
         
         {/* Banner de Perfil */}
         <div className="bg-gradient-to-r from-[#064D91] to-[#52A9B7] rounded-2xl shadow-lg p-8 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -ml-24 -mb-24"></div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -ml-24 -mb-24" />
           
           <div className="relative flex flex-col md:flex-row items-center gap-8">
-            <div className="relative group cursor-pointer">
-              <Avatar src={user?.avatar} name={user?.nombre_completo} size="xl" className="w-32 h-32 border-4 border-white shadow-xl" />
+
+            {/* Avatar con upload — usa avatarSrc en lugar de user?.avatar */}
+            <div className="relative group cursor-pointer flex-shrink-0">
+              <img
+                src={avatarSrc}
+                alt="Perfil"
+                className="w-32 h-32 rounded-full border-4 border-white/30 shadow-xl object-cover"
+              />
               <label className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                 {uploadingPhoto ? (
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <Camera size={24} className="text-white" />
                 )}
-                <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} />
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  disabled={uploadingPhoto}
+                />
               </label>
             </div>
             
             <div className="flex-1 text-center md:text-left">
               <h2 className="text-3xl font-bold mb-2">{user?.nombre_completo || user?.username}</h2>
-              <p className="text-lg text-blue-100 mb-4">{user?.rol === 'estudiante' ? 'Estudiante de Capacitación' : user?.rol}</p>
+              <p className="text-lg text-blue-100 mb-4">
+                {user?.rol === 'estudiante' ? 'Estudiante de Capacitación' : user?.rol}
+              </p>
               <div className="flex flex-wrap justify-center md:justify-start gap-6 text-sm opacity-90">
                 <span className="flex items-center gap-2"><Mail size={16} /> {user?.email}</span>
                 <span className="flex items-center gap-2"><ShieldCheck size={16} /> Cuenta Verificada</span>
@@ -205,7 +224,7 @@ export function StudentProfilePage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* Columna Izquierda: Formularios */}
+          {/* Columna Izquierda */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
               <h3 className="text-xl font-bold text-slate-800 mb-6">Información Personal</h3>
@@ -248,9 +267,9 @@ export function StudentProfilePage() {
                   <div className="text-xs text-blue-800 leading-relaxed">
                     <p className="font-bold mb-1">Requisitos de contraseña:</p>
                     <ul className="list-disc list-inside">
-                        <li>Mínimo 8 caracteres</li>
-                        <li>Al menos una letra mayúscula</li>
-                        <li>Al menos un número</li>
+                      <li>Mínimo 8 caracteres</li>
+                      <li>Al menos una letra mayúscula</li>
+                      <li>Al menos un número</li>
                     </ul>
                   </div>
                 </div>
@@ -264,69 +283,50 @@ export function StudentProfilePage() {
             </div>
           </div>
 
-          {/* Columna Derecha: Resumen de Actividad y Accesos (Mockup style) */}
+          {/* Columna Derecha */}
           <div className="space-y-6">
-            
-            {/* Card "Resumen de Actividad" (Recreado del mockup) */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
               <h3 className="text-lg font-bold text-slate-800 mb-6">Resumen de Actividad</h3>
-              
               <div className="space-y-4">
-                {/* Item 1: Cursos Activos */}
-                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <BookOpen size={20} className="text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-600">Cursos Activos</p>
-                      <p className="text-xl font-bold text-slate-800">---</p>
-                    </div>
+                <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <BookOpen size={20} className="text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-600">Cursos Activos</p>
+                    <p className="text-xl font-bold text-slate-800">---</p>
                   </div>
                 </div>
-
-                {/* Item 2: Completados */}
-                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                      <CheckCircle2 size={20} className="text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-600">Completados</p>
-                      <p className="text-xl font-bold text-slate-800">---</p>
-                    </div>
+                <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <CheckCircle2 size={20} className="text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-600">Completados</p>
+                    <p className="text-xl font-bold text-slate-800">---</p>
                   </div>
                 </div>
-
-                {/* Item 3: Diplomas */}
-                <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                      <Award size={20} className="text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-600">Diplomas</p>
-                      <p className="text-xl font-bold text-slate-800">---</p>
-                    </div>
+                <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Award size={20} className="text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-600">Diplomas</p>
+                    <p className="text-xl font-bold text-slate-800">---</p>
                   </div>
                 </div>
-
-                {/* Item 4: Promedio */}
-                <div className="flex items-center justify-between p-4 bg-amber-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                      <TrendingUp size={20} className="text-amber-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-600">Promedio</p>
-                      <p className="text-xl font-bold text-slate-800">---</p>
-                    </div>
+                <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg">
+                  <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                    <TrendingUp size={20} className="text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-600">Promedio</p>
+                    <p className="text-xl font-bold text-slate-800">---</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Accesos Directos */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
               <h3 className="text-lg font-bold text-slate-800 mb-6">Accesos Directos</h3>
               <div className="space-y-3">
@@ -338,7 +338,6 @@ export function StudentProfilePage() {
                 </button>
               </div>
             </div>
-
           </div>
         </div>
       </div>

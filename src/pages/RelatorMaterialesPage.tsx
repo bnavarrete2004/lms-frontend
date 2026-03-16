@@ -264,6 +264,8 @@ export function RelatorMaterialesPage() {
   const [activeTab, setActiveTab]   = useState<TabEstado>('todos');
   const [busqueda, setBusqueda]     = useState('');
   const [paginaActual, setPaginaActual] = useState(1);
+  // ── NUEVO: conteo real de notificaciones no leídas ──────────────────────────
+  const [notifCount, setNotifCount] = useState<number>(0);
 
   const [modalRechazo, setModalRechazo]       = useState<{ active: boolean; material: Material | null }>({ active: false, material: null });
   const [modalVista, setModalVista]           = useState<Material | null>(null);
@@ -281,7 +283,22 @@ export function RelatorMaterialesPage() {
     }
   };
 
-  useEffect(() => { cargarMateriales(); }, []);
+  // ── NUEVO: carga el número real de notificaciones no leídas ─────────────────
+  const cargarNotificaciones = async () => {
+    try {
+      const res = await api.get('/notificaciones/', { params: { page_size: 1000 } });
+      const lista = res.data?.results || res.data || [];
+      const noLeidas = lista.filter((n: { leida: boolean }) => !n.leida).length;
+      setNotifCount(noLeidas);
+    } catch {
+      // silencioso — el badge simplemente no aparece si falla
+    }
+  };
+
+  useEffect(() => {
+    cargarMateriales();
+    cargarNotificaciones();
+  }, []);
 
   const handleEliminar = async () => {
     if (!materialAEliminar) return;
@@ -335,7 +352,8 @@ export function RelatorMaterialesPage() {
     {
       title: 'Cuenta',
       items: [
-        { icon: <Bell  size={20} />, label: 'Notificaciones', href: '/relator/notificaciones', badge: '3', badgeVariant: 'danger' as const },
+        // ── CAMBIADO: badge dinámico en lugar del '3' hardcodeado ──────────────
+        { icon: <Bell  size={20} />, label: 'Notificaciones', href: '/relator/notificaciones', badge: notifCount > 0 ? String(notifCount) : undefined, badgeVariant: 'danger' as const },
         { icon: <Users size={20} />, label: 'Mi Perfil',      href: '/relator/perfil' },
       ],
     },

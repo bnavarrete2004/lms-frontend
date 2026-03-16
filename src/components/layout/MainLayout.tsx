@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface MainLayoutProps {
   // Props del Sidebar
   role: 'administrador' | 'relator' | 'estudiante';
   userName: string;
   userSubtitle?: string;
-  userAvatar?: string;
+  // ── userAvatar eliminado: ahora se lee del AuthContext directamente ──
   sidebarSections: Array<{
     title?: string;
     items: Array<{
@@ -36,7 +37,6 @@ export function MainLayout({
   role,
   userName,
   userSubtitle,
-  userAvatar,
   sidebarSections,
   onLogout,
   headerTitle,
@@ -47,6 +47,13 @@ export function MainLayout({
   headerActions,
   children,
 }: MainLayoutProps) {
+  // ── Lee el avatar siempre fresco desde el contexto ──────────────────────────
+  const { user } = useAuth();
+  const userAvatar =
+    user?.avatar_url ||
+    user?.avatar ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=fff&color=064D91&size=128`;
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
       {/* Sidebar */}
