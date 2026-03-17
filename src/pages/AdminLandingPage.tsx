@@ -250,7 +250,7 @@ function ModalLogos({ logos, onClose, onSave }: {
   );
 }
 
-// ── Modal noticias con imagen ─────────────────────────────────────────────────
+// ── Modal noticias con imagen y contenido completo ────────────────────────────
 function ModalNoticias({ noticias, titulo, descripcion, onClose, onSave }: {
   noticias: [NoticiaContent, NoticiaContent, NoticiaContent];
   titulo: string; descripcion: string;
@@ -262,6 +262,7 @@ function ModalNoticias({ noticias, titulo, descripcion, onClose, onSave }: {
   const [form, setForm] = useState<[NoticiaContent, NoticiaContent, NoticiaContent]>(
     JSON.parse(JSON.stringify(noticias))
   );
+
   const update = (i: number, field: keyof NoticiaContent, value: string) => {
     const copy = [...form] as typeof form;
     copy[i] = { ...copy[i], [field]: value };
@@ -272,47 +273,104 @@ function ModalNoticias({ noticias, titulo, descripcion, onClose, onSave }: {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="px-6 py-4 border-b flex justify-between items-center bg-amber-50">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2"><Pencil size={16} className="text-amber-500" /> Editar Noticias</h3>
+          <h3 className="font-bold text-slate-800 flex items-center gap-2">
+            <Pencil size={16} className="text-amber-500" /> Editar Noticias
+          </h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
+
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Encabezado sección */}
           <div className="border rounded-xl p-4 space-y-3 bg-slate-50">
             <h4 className="font-bold text-slate-600 text-sm">Encabezado de sección</h4>
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Título</label>
-              <input type="text" className="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-amber-400/30" value={tit} onChange={e => setTit(e.target.value)} />
+              <input
+                type="text"
+                className="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-amber-400/30"
+                value={tit}
+                onChange={e => setTit(e.target.value)}
+              />
             </div>
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Descripción</label>
-              <textarea rows={2} className="w-full border rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-amber-400/30 resize-none" value={desc} onChange={e => setDesc(e.target.value)} />
+              <textarea
+                rows={2}
+                className="w-full border rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-amber-400/30 resize-none"
+                value={desc}
+                onChange={e => setDesc(e.target.value)}
+              />
             </div>
           </div>
+
           {/* Noticias */}
           {form.map((n, i) => (
             <div key={i} className="border rounded-xl p-5 space-y-4">
               <h4 className="font-bold text-slate-700">Noticia {i + 1}</h4>
-              <ImageUploader label="Imagen de portada" value={n.imageUrl} onChange={v => update(i, 'imageUrl', v)} />
+
+              <ImageUploader
+                label="Imagen de portada"
+                value={n.imageUrl}
+                onChange={v => update(i, 'imageUrl', v)}
+              />
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fecha</label>
-                  <input type="text" className="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-amber-400/30" value={n.fecha} onChange={e => update(i, 'fecha', e.target.value)} />
+                  <input
+                    type="text"
+                    className="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-amber-400/30"
+                    value={n.fecha}
+                    onChange={e => update(i, 'fecha', e.target.value)}
+                  />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Título</label>
-                  <input type="text" className="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-amber-400/30" value={n.titulo} onChange={e => update(i, 'titulo', e.target.value)} />
+                  <input
+                    type="text"
+                    className="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-amber-400/30"
+                    value={n.titulo}
+                    onChange={e => update(i, 'titulo', e.target.value)}
+                  />
                 </div>
               </div>
+
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Resumen</label>
-                <textarea rows={2} className="w-full border rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-amber-400/30 resize-none" value={n.resumen} onChange={e => update(i, 'resumen', e.target.value)} />
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                  Resumen{' '}
+                  <span className="text-slate-300 normal-case font-normal">(se muestra en la tarjeta)</span>
+                </label>
+                <textarea
+                  rows={2}
+                  className="w-full border rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-amber-400/30 resize-none"
+                  value={n.resumen}
+                  onChange={e => update(i, 'resumen', e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                  Contenido completo{' '}
+                  <span className="text-slate-300 normal-case font-normal">(se muestra al hacer clic en "Leer más")</span>
+                </label>
+                <textarea
+                  rows={6}
+                  placeholder="Escribe aquí el texto completo de la noticia..."
+                  className="w-full border rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-amber-400/30 resize-y"
+                  value={n.contenido_completo}
+                  onChange={e => update(i, 'contenido_completo', e.target.value)}
+                />
               </div>
             </div>
           ))}
         </div>
+
         <div className="px-6 py-4 border-t bg-slate-50 flex justify-end gap-3">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => onSave({ titulo: tit, descripcion: desc, noticias: form })} className="bg-amber-500 hover:bg-amber-600 text-white">
+          <Button
+            onClick={() => onSave({ titulo: tit, descripcion: desc, noticias: form })}
+            className="bg-amber-500 hover:bg-amber-600 text-white"
+          >
             <Save size={14} className="mr-2" /> Aplicar
           </Button>
         </div>
@@ -391,9 +449,7 @@ export function AdminLandingPage() {
         </EditableSection>
 
         {/* Clientes tiene dos botones: texto y logos */}
-        <div className="relative"
-          onMouseEnter={() => {}}
-        >
+        <div className="relative">
           {!vistaPrevia && (
             <div className="absolute top-4 right-4 z-40 flex gap-2">
               <button onClick={() => abrir('clientes_logos')} className="bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-2 px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider">
@@ -501,7 +557,13 @@ export function AdminLandingPage() {
           noticias={[content.noticias.noticia1, content.noticias.noticia2, content.noticias.noticia3]}
           onClose={cerrar}
           onSave={({ titulo, descripcion, noticias }) => {
-            updateSection('noticias', { titulo, descripcion, noticia1: noticias[0], noticia2: noticias[1], noticia3: noticias[2] });
+            updateSection('noticias', {
+              titulo,
+              descripcion,
+              noticia1: noticias[0],
+              noticia2: noticias[1],
+              noticia3: noticias[2],
+            });
             cerrar();
           }}
         />

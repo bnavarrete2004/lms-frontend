@@ -61,7 +61,8 @@ export interface NoticiaContent {
   fecha: string;
   titulo: string;
   resumen: string;
-  imageUrl: string; // base64 o URL — vacío = usa gradiente
+  contenido_completo: string; // ← campo nuevo: texto completo de la noticia
+  imageUrl: string;
 }
 
 export interface NoticiasContent {
@@ -167,12 +168,30 @@ export const LANDING_DEFAULTS: LandingContent = {
     },
   },
   noticias: {
-    titulo: 'Últimas Noticias',
-    descripcion: 'Mantente informado sobre novedades, nuevos cursos y actualizaciones.',
-    noticia1: { fecha: '05 Enero 2026', titulo: 'Nuevos cursos de Transformación Digital', resumen: 'Lanzamos una nueva línea de cursos enfocados en la transformación digital de las empresas.', imageUrl: '' },
-    noticia2: { fecha: '28 Diciembre 2025', titulo: 'Certificación SENCE renovada para 2026', resumen: 'Hemos renovado nuestra certificación SENCE, garantizando la calidad de nuestros programas.', imageUrl: '' },
-    noticia3: { fecha: '15 Diciembre 2025', titulo: 'Tips para Capacitación Online Efectiva', resumen: 'Descubre cómo sacar el máximo provecho a nuestra plataforma asincrónica con estos consejos.', imageUrl: '' },
+  titulo: 'Últimas Noticias',
+  descripcion: 'Mantente informado sobre novedades, nuevos cursos y actualizaciones.',
+  noticia1: {
+    fecha: '05 Enero 2026',
+    titulo: 'Nuevos cursos de Transformación Digital',
+    resumen: 'Lanzamos una nueva línea de cursos enfocados en la transformación digital de las empresas.',
+    contenido_completo: '',
+    imageUrl: '',
   },
+  noticia2: {
+    fecha: '28 Diciembre 2025',
+    titulo: 'Certificación SENCE renovada para 2026',
+    resumen: 'Hemos renovado nuestra certificación SENCE, garantizando la calidad de nuestros programas.',
+    contenido_completo: '',
+    imageUrl: '',
+  },
+  noticia3: {
+    fecha: '15 Diciembre 2025',
+    titulo: 'Tips para Capacitación Online Efectiva',
+    resumen: 'Descubre cómo sacar el máximo provecho a nuestra plataforma asincrónica con estos consejos.',
+    contenido_completo: '',
+    imageUrl: '',
+  },
+},
   footer: {
     nombre_empresa: 'J&C Digital Training',
     eslogan: 'Potenciando el talento humano a través de la educación digital.',

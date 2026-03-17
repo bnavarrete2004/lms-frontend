@@ -8,11 +8,13 @@ interface NewsSectionProps {
 }
 
 export function NewsSection({ content = LANDING_DEFAULTS.noticias }: NewsSectionProps) {
-  const news = [
-    { title: content.noticia1.titulo, excerpt: content.noticia1.resumen, date: content.noticia1.fecha, gradient: 'bg-gradient-to-br from-jc-blue-dark to-jc-calipso', imageUrl: content.noticia1.imageUrl || undefined },
-    { title: content.noticia2.titulo, excerpt: content.noticia2.resumen, date: content.noticia2.fecha, gradient: 'bg-gradient-to-br from-jc-blue to-jc-blue-dark',    imageUrl: content.noticia2.imageUrl || undefined },
-    { title: content.noticia3.titulo, excerpt: content.noticia3.resumen, date: content.noticia3.fecha, gradient: 'bg-gradient-to-br from-jc-calipso to-white',         imageUrl: content.noticia3.imageUrl || undefined },
+  const gradients = [
+    'bg-gradient-to-br from-jc-blue-dark to-jc-calipso',
+    'bg-gradient-to-br from-jc-blue to-jc-blue-dark',
+    'bg-gradient-to-br from-jc-calipso to-white',
   ];
+
+  const noticias = [content.noticia1, content.noticia2, content.noticia3];
 
   return (
     <section id="noticias" className="py-20 bg-white">
@@ -27,8 +29,12 @@ export function NewsSection({ content = LANDING_DEFAULTS.noticias }: NewsSection
           </p>
         </div>
         <div className="grid md:grid-cols-3 gap-8">
-          {news.map((article, index) => (
-            <NewsCard key={index} {...article} />
+          {noticias.map((noticia, index) => (
+            <NewsCard
+              key={index}
+              noticia={noticia}
+              gradient={gradients[index]}
+            />
           ))}
         </div>
       </div>
