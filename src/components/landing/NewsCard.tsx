@@ -1,7 +1,7 @@
 // src/components/landing/NewsCard.tsx
 import { useState } from 'react';
 import { Calendar, ArrowRight } from 'lucide-react';
-import { NewsModal } from './NewsModal';
+import { NewsModal } from '@/components/landing/NewsModal';
 import type { NoticiaContent } from '@/hooks/useLandingContent';
 
 interface NewsCardProps {

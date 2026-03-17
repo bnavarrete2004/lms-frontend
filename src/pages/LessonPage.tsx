@@ -193,8 +193,6 @@ export function LessonPage() {
   const currentStep        = steps[currentStepIndex];
   const progressPercentage = Math.round((currentStepIndex / (steps.length - 1)) * 100);
 
-  
-
   return (
     <MainLayout
       role="estudiante"
@@ -459,29 +457,140 @@ function PresentacionStep({ step, onNext, onBack }: any) {
 
 function QuizStep({ step, onNext }: any) {
   const preguntasRaw = step.data.preguntas;
-  const preguntas: Pregunta[] = Array.isArray(preguntasRaw) ? preguntasRaw : (() => { try { return JSON.parse(preguntasRaw || '[]'); } catch { return []; } })();
-  const [respuestas, setRespuestas] = useState<Record<number, number>>({});
-  const [enviado, setEnviado] = useState(false);
+  const preguntas: Pregunta[] = Array.isArray(preguntasRaw)
+    ? preguntasRaw
+    : (() => { try { return JSON.parse(preguntasRaw || '[]'); } catch { return []; } })();
+
+  const [respuestas, setRespuestas]         = useState<Record<number, number>>({});
+  const [enviado, setEnviado]               = useState(false);
   const [preguntaActual, setPreguntaActual] = useState(0);
 
-  if (preguntas.length === 0) return <div className="text-center p-12 bg-white rounded-2xl">No hay preguntas cargadas.</div>;
+  if (preguntas.length === 0)
+    return <div className="text-center p-12 bg-white rounded-2xl">No hay preguntas cargadas.</div>;
 
   const totalCorrectas = preguntas.filter((p, i) => respuestas[i] === p.respuesta_correcta).length;
   const porcentaje     = Math.round((totalCorrectas / preguntas.length) * 100);
   const aprobado       = porcentaje >= 60;
 
+  // ── Pantalla de resultados detallada ──────────────────────────────────────
   if (enviado) {
     return (
-      <div className="bg-white rounded-2xl p-10 space-y-6 text-center">
-        <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto ${aprobado ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-          <span className="text-2xl font-bold">{porcentaje}%</span>
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+
+        {/* Resumen de puntaje */}
+        <div className={`px-8 py-6 text-center ${aprobado ? 'bg-green-50' : 'bg-amber-50'}`}>
+          <div className={`text-5xl font-bold mb-1 ${aprobado ? 'text-green-700' : 'text-amber-700'}`}>
+            {porcentaje}%
+          </div>
+          <p className={`text-sm font-semibold ${aprobado ? 'text-green-600' : 'text-amber-600'}`}>
+            {totalCorrectas} de {preguntas.length} correctas · {aprobado ? '¡Aprobado! ✓' : 'No aprobado'}
+          </p>
         </div>
-        <h3 className="text-2xl font-bold">{aprobado ? '¡Aprobado!' : 'No aprobado'}</h3>
-        <button onClick={onNext} className="px-8 py-2 bg-jc-blue text-white rounded-xl">Continuar →</button>
+
+        {/* Revisión pregunta a pregunta */}
+        <div className="p-6 space-y-4">
+          {preguntas.map((pregunta, idx) => {
+            const respuestaIdx  = respuestas[idx];
+            const correctaIdx   = pregunta.respuesta_correcta;
+            const esCorrecta    = respuestaIdx === correctaIdx;
+            const sinResponder  = respuestaIdx === undefined;
+            const opciones: string[] = Array.isArray(pregunta.opciones) ? pregunta.opciones : [];
+
+            return (
+              <div
+                key={idx}
+                className={`rounded-xl border-2 overflow-hidden ${
+                  esCorrecta ? 'border-green-200' : 'border-red-200'
+                }`}
+              >
+                {/* Cabecera de resultado */}
+                <div
+                  className={`px-4 py-2.5 flex items-center gap-2 text-sm font-semibold ${
+                    esCorrecta
+                      ? 'bg-green-50 text-green-700'
+                      : 'bg-red-50 text-red-700'
+                  }`}
+                >
+                  {esCorrecta ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  )}
+                  Pregunta {idx + 1} · {esCorrecta ? 'Correcta' : sinResponder ? 'Sin responder' : 'Incorrecta'}
+                </div>
+
+                {/* Enunciado y opciones */}
+                <div className="px-4 py-4 bg-white space-y-2">
+                  <p className="text-sm font-medium text-slate-800 mb-3">{pregunta.enunciado}</p>
+
+                  {opciones.map((opcion, opIdx) => {
+                    const esTuRespuesta = respuestaIdx === opIdx;
+                    const esLaCorrecta  = correctaIdx === opIdx;
+
+                    let clases = 'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm ';
+                    if (esTuRespuesta && esLaCorrecta) {
+                      clases += 'bg-green-50 text-green-800 font-medium';
+                    } else if (esTuRespuesta && !esLaCorrecta) {
+                      clases += 'bg-red-50 text-red-700 font-medium line-through';
+                    } else if (!esTuRespuesta && esLaCorrecta) {
+                      clases += 'bg-green-50 text-green-800 font-medium';
+                    } else {
+                      clases += 'text-slate-400';
+                    }
+
+                    return (
+                      <div key={opIdx} className={clases}>
+                        {/* Indicador de estado */}
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                          esTuRespuesta && esLaCorrecta  ? 'bg-green-200 text-green-700' :
+                          esTuRespuesta && !esLaCorrecta ? 'bg-red-200 text-red-700'     :
+                          esLaCorrecta                   ? 'bg-green-200 text-green-700' :
+                                                           'bg-slate-100 text-slate-400'
+                        }`}>
+                          {esTuRespuesta && esLaCorrecta  ? '✓' :
+                           esTuRespuesta && !esLaCorrecta ? '✗' :
+                           esLaCorrecta                   ? '★' : '·'}
+                        </span>
+
+                        <span>{opcion}</span>
+
+                        {/* Etiquetas aclaratorias */}
+                        {esTuRespuesta && esLaCorrecta && (
+                          <span className="ml-auto text-[11px] text-green-600 font-semibold">Tu respuesta ✓</span>
+                        )}
+                        {esTuRespuesta && !esLaCorrecta && (
+                          <span className="ml-auto text-[11px] text-red-500 font-semibold">Tu respuesta</span>
+                        )}
+                        {!esTuRespuesta && esLaCorrecta && (
+                          <span className="ml-auto text-[11px] text-green-600 font-semibold">Respuesta correcta</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Botón continuar */}
+        <div className="px-6 pb-6">
+          <button
+            onClick={onNext}
+            className="w-full py-3 bg-jc-blue text-white rounded-xl font-bold hover:opacity-90 transition"
+          >
+            Continuar →
+          </button>
+        </div>
       </div>
     );
   }
 
+  // ── Pregunta activa ────────────────────────────────────────────────────────
   const p = preguntas[preguntaActual];
   return (
     <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
@@ -492,16 +601,45 @@ function QuizStep({ step, onNext }: any) {
       <div className="p-8 space-y-6">
         <p className="font-semibold text-lg">{p.enunciado}</p>
         <div className="space-y-3">
-          {p.opciones.map((op, i) => (
-            <button key={i} onClick={() => setRespuestas(prev => ({ ...prev, [preguntaActual]: i }))}
-              className={`w-full text-left p-4 rounded-xl border-2 transition-all ${respuestas[preguntaActual] === i ? 'border-jc-blue bg-blue-50' : 'border-slate-200 hover:border-slate-300'}`}>
+          {(Array.isArray(p.opciones) ? p.opciones : []).map((op: string, i: number) => (
+            <button
+              key={i}
+              onClick={() => setRespuestas(prev => ({ ...prev, [preguntaActual]: i }))}
+              className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                respuestas[preguntaActual] === i
+                  ? 'border-jc-blue bg-blue-50'
+                  : 'border-slate-200 hover:border-slate-300'
+              }`}
+            >
               {op}
             </button>
           ))}
         </div>
         <div className="flex justify-between">
-          <button onClick={() => setPreguntaActual(i => i - 1)} disabled={preguntaActual === 0} className="px-4 py-2 bg-slate-100 rounded-lg">Anterior</button>
-          {preguntaActual < preguntas.length - 1 ? <button onClick={() => setPreguntaActual(i => i + 1)} disabled={respuestas[preguntaActual] === undefined} className="px-6 py-2 bg-jc-blue text-white rounded-lg">Siguiente</button> : <button onClick={() => setEnviado(true)} disabled={Object.keys(respuestas).length < preguntas.length} className="px-6 py-2 bg-green-600 text-white rounded-lg font-bold">Enviar</button>}
+          <button
+            onClick={() => setPreguntaActual(i => i - 1)}
+            disabled={preguntaActual === 0}
+            className="px-4 py-2 bg-slate-100 rounded-lg disabled:opacity-40"
+          >
+            Anterior
+          </button>
+          {preguntaActual < preguntas.length - 1 ? (
+            <button
+              onClick={() => setPreguntaActual(i => i + 1)}
+              disabled={respuestas[preguntaActual] === undefined}
+              className="px-6 py-2 bg-jc-blue text-white rounded-lg"
+            >
+              Siguiente
+            </button>
+          ) : (
+            <button
+              onClick={() => setEnviado(true)}
+              disabled={Object.keys(respuestas).length < preguntas.length}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg font-bold"
+            >
+              Enviar
+            </button>
+          )}
         </div>
       </div>
     </div>

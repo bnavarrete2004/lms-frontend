@@ -323,16 +323,16 @@ export function AdminRepoPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   const cargarDatos = async () => {
-    try {
-      setLoading(true);
-      const mRes = await api.get('/materiales/');
-      setMateriales(mRes.data?.results || mRes.data || []);
-    } catch (error) {
-      console.error('Error cargando repositorio:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    setLoading(true);
+    const mRes = await api.get('/materiales/', { params: { page_size: 1000 } }); // ← agregar params
+    setMateriales(mRes.data?.results || mRes.data || []);
+  } catch (error) {
+    console.error('Error cargando repositorio:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => { cargarDatos(); }, []);
 
@@ -351,16 +351,20 @@ export function AdminRepoPage() {
   };
 
   const handleEliminar = async () => {
-    if (!materialAEliminar) return;
-    try {
-      await api.delete(`/materiales/${materialAEliminar.id}/`);
-      setMateriales(prev => prev.filter(m => m.id !== materialAEliminar.id));
-      setMaterialAEliminar(null);
-    } catch (error) {
-      console.error('Error al eliminar:', error);
-      setMaterialAEliminar(null);
-    }
-  };
+  if (!materialAEliminar) return;
+  try {
+    await api.delete(`/materiales/${materialAEliminar.id}/`);
+    setMateriales(prev => prev.filter(m => m.id !== materialAEliminar.id));
+    setMaterialAEliminar(null);
+  } catch (error: any) {
+    console.error('Error al eliminar:', error);
+    const mensaje = error?.response?.data?.detail
+      || error?.response?.data?.error
+      || 'Error al eliminar el material';
+    alert(`Error: ${mensaje}`);
+    setMaterialAEliminar(null);
+  }
+};
 
   const handleGuardarDisenoFinal = async () => {
     if (!materialParaDiseno || !archivoFinal) return;
