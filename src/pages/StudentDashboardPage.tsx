@@ -253,7 +253,8 @@ export function DashboardPage() {
       .finally(() => setLoadingCatalogo(false));
   }, []);
 
-  const inscripcionesActivas = inscripciones?.filter(i => i.estado === 'en_curso') || [];
+  const inscripcionesActivas = inscripciones?.filter(
+  i => i.estado === 'en_curso' || i.estado === 'inscrito') || [];
   const progresoGeneral = inscripciones && inscripciones.length > 0
     ? Math.round(inscripciones.reduce((sum, i) => sum + (i.porcentaje_avance || 0), 0) / inscripciones.length)
     : 0;

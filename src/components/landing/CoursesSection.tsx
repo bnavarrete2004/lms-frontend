@@ -1,6 +1,6 @@
 // src/components/landing/CoursesSection.tsx
 import { useState, useEffect } from 'react';
-import { X, Clock, Star } from 'lucide-react';
+import { X, Clock } from 'lucide-react';
 import { CoursePreviewCard } from './CoursePreviewCard';
 import { Button } from '@/components/ui/Button';
 import type { CursosContent } from '@/hooks/useLandingContent';
