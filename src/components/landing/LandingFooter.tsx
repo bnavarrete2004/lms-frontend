@@ -1,7 +1,8 @@
-// src/components/landing/LandingFooter.tsx
 import { Mail, Phone, MapPin } from 'lucide-react';
 import type { FooterContent } from '@/hooks/useLandingContent';
 import { LANDING_DEFAULTS } from '@/hooks/useLandingContent';
+import logoSence from '@/assets/images/logo_sence_white.png';
+import logoIram from '@/assets/images/logo_blanco-iram_300x163.png';
 
 interface LandingFooterProps {
   content?: FooterContent;
@@ -52,20 +53,20 @@ export function LandingFooter({ content = LANDING_DEFAULTS.footer }: LandingFoot
             </ul>
           </div>
 
-          {/* Certification Logos — sin cambios, son imágenes fijas */}
+          {/* Certification Logos */}
           <div>
             <h4 className="text-lg font-semibold mb-4">Certificaciones</h4>
             <div className="space-y-4">
               <div className="bg-white/5 backdrop-blur-sm p-4 rounded-lg flex items-center justify-center">
                 <img
-                  src="/src/assets/images/logo_sence_white.png"
+                  src={logoSence}
                   alt="SENCE"
                   className="h-12 w-auto object-contain"
                 />
               </div>
               <div className="bg-white/5 backdrop-blur-sm p-4 rounded-lg flex items-center justify-center">
                 <img
-                  src="/src/assets/images/logo_blanco-iram_300x163.png"
+                  src={logoIram}
                   alt="IRAM"
                   className="h-12 w-auto object-contain"
                 />
