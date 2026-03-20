@@ -402,7 +402,9 @@ export function ExamenPage() {
       return (
         <PantallaFin
           titulo="¡Aprobado! 🎉"
-          subtitulo={esIntermedia ? 'Continúa con el siguiente módulo.' : '¡Has completado el curso exitosamente!'}
+          subtitulo={esIntermedia
+  ? 'Módulo completado. Vuelve al curso para continuar o cerrar tu sesión SENCE.'
+  : '¡Has completado el curso exitosamente!'}
           variante="exito"
           accion={{ label: esIntermedia ? 'Continuar al siguiente módulo' : 'Volver al curso', onClick: () => navigate(`/student/courses/${cursoId}`) }}
           extra={

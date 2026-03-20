@@ -2,6 +2,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { PasswordResetPage } from '@/pages/PasswordResetPage';
 
 // --- PÁGINAS PÚBLICAS ---
 import { LandingPage } from '@/pages/LandingPage';
@@ -67,6 +68,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<PasswordResetPage />} />
 
           {/* ==========================================
               RUTAS ESTUDIANTE
